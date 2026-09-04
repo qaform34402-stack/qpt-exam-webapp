@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<title>ระบบข้อสอบ QPT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Sarabun", sans-serif;
+    background: #f2f4f7;
+    margin: 0;
+  }
+  .container {
+    max-width: 380px;
+    margin: 60px auto;
+    background: white;
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  h2 { margin-top: 0; }
+  input {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    margin: 8px 0;
+    border: 1px solid #d0d5dd;
+    border-radius: 10px;
+  }
+  button {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  button:disabled { background: #93b4f0; }
+  .error { color: #dc2626; margin-top: 10px; font-size: 14px; }
+  .role-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ---- แก้ 2 ค่านี้ให้ตรงกับโปรเจกต์ Supabase ของคุณ ----
+const SUPABASE_URL = "https://wpaghjsgvjueqfjaxkyw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Iyv8GG8ufYUdwG8U8BF5tg_tu8qJuw_;
+
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function LoginPage({ onLogin }) {
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    setError("");
+    if (!code.trim()) return;
+    setLoading(true);
+    const email = code.trim() + "@qpt.internal";
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: code.trim(),
+    });
+    setLoading(false);
+    if (error) {
+      setError("รหัสพนักงานไม่ถูกต้อง หรือยังไม่มีในระบบ");
+      return;
+    }
+    onLogin(data.session);
+  };
+
+  return (
+    <div className="container">
+      <h2>เข้าสู่ระบบ QPT</h2>
+      <input
+        type="text"
+        inputMode="numeric"
+        placeholder="กรอกรหัสพนักงาน"
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+        autoFocus
+      />
+      <button onClick={handleLogin} disabled={loading}>
+        {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+      </button>
+      {error && <div className="error">{error}</div>}
+    </div>
+  );
+}
+
+function Dashboard({ session, role, onLogout }) {
+  const roleLabel = { admin: "แอดมิน (เจ้าหน้าที่)", foreman: "Foreman", employee: "พนักงาน" }[role] || role;
+
+  return (
+    <div className="container">
+      <div className="role-badge">{roleLabel}</div>
+      <h2>ยินดีต้อนรับ</h2>
+      <p style={{ color: "#667085" }}>
+        เข้าสู่ระบบสำเร็จ — หน้าเมนูจริงของบทบาทนี้จะถูกสร้างในขั้นตอนถัดไป
+      </p>
+      <button onClick={onLogout}>ออกจากระบบ</button>
+    </div>
+  );
+}
+
+function App() {
+  const [session, setSession] = useState(null);
+  const [role, setRole] = useState(null);
+  const [loadingSession, setLoadingSession] = useState(true);
+
+  useEffect(() => {
+    supabaseClient.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        applySession(data.session);
+      } else {
+        setLoadingSession(false);
+      }
+    });
+  }, []);
+
+  const applySession = (session) => {
+    setSession(session);
+    setRole(session.user.user_metadata.role || "employee");
+    setLoadingSession(false);
+  };
+
+  const handleLogout = async () => {
+    await supabaseClient.auth.signOut();
+    setSession(null);
+    setRole(null);
+  };
+
+  if (loadingSession) return <div className="container">กำลังโหลด...</div>;
+  if (!session) return <LoginPage onLogin={applySession} />;
+  return <Dashboard session={session} role={role} onLogout={handleLogout} />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
