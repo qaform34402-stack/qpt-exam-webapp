@@ -30,13 +30,14 @@
     padding: 0 16px 40px;
   }
   h2 { margin-top: 0; }
-  input {
+  input, select {
     width: 100%;
     padding: 14px;
     font-size: 18px;
     margin: 8px 0;
     border: 1px solid #d0d5dd;
     border-radius: 10px;
+    font-family: inherit;
   }
   button {
     padding: 12px 18px;
@@ -104,6 +105,37 @@
   th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eaecf0; font-size: 14px; }
   .pass { color: #067647; font-weight: 600; }
   .fail { color: #b42318; font-weight: 600; }
+  .attendance-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eaecf0;
+  }
+  .attendance-row .name { font-weight: 500; }
+  .attendance-row .meta { font-size: 13px; color: #667085; }
+  .status-btn {
+    width: 72px;
+    text-align: center;
+    padding: 10px 8px;
+    flex-shrink: 0;
+  }
+  .status-btn.present { background: #067647; }
+  .status-btn.absent { background: #b42318; }
+  .note-input {
+    width: 140px;
+    padding: 8px;
+    margin: 0;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .new-session-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .new-session-row input, .new-session-row select { width: auto; margin: 0; }
 </style>
 </head>
 <body>
@@ -319,6 +351,349 @@ function AdminCalendarPage() {
   );
 }
 
+// ---- แถวมาร์คการเข้าอบรมของพนักงาน 1 คน ----
+function AttendanceRow({ emp, data, onToggle, onNote, onRemove }) {
+  const present = data.status === "present";
+  return (
+    <div className="attendance-row">
+      <div style={{ flex: 1 }}>
+        <div className="name">{emp.name}</div>
+        <div className="meta">
+          {emp.employee_code}{emp.shift ? " · กะ" + emp.shift : ""}
+        </div>
+      </div>
+      <button
+        className={"status-btn " + (present ? "present" : "absent")}
+        onClick={onToggle}
+      >
+        {present ? "มา" : "ขาด"}
+      </button>
+      <input
+        type="text"
+        className="note-input"
+        placeholder="หมายเหตุ"
+        value={data.note || ""}
+        onChange={(e) => onNote(e.target.value)}
+      />
+      {onRemove && (
+        <button className="secondary" onClick={onRemove}>×</button>
+      )}
+    </div>
+  );
+}
+
+// ---- หน้า Foreman: มาร์คการเข้าอบรม ----
+function ForemanPage({ session }) {
+  const [me, setMe] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [calendarRows, setCalendarRows] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [attendance, setAttendance] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [savingMsg, setSavingMsg] = useState("");
+  const [newDate, setNewDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [newShift, setNewShift] = useState("");
+
+  useEffect(() => {
+    loadInitial();
+  }, []);
+
+  const loadInitial = async () => {
+    setLoading(true);
+    const code = session.user.email.split("@")[0];
+    const [meRes, empRes, calRes] = await Promise.all([
+      supabaseClient
+        .from("employees")
+        .select("id, employee_code, name, shift")
+        .eq("employee_code", code)
+        .single(),
+      supabaseClient
+        .from("employees")
+        .select("id, employee_code, name, shift")
+        .eq("active", true)
+        .order("name"),
+      supabaseClient
+        .from("training_calendar")
+        .select("id, year, month, course_id, courses(name)")
+        .order("year")
+        .order("month"),
+    ]);
+    setMe(meRes.data || null);
+    setEmployees(empRes.data || []);
+    setCalendarRows(calRes.data || []);
+    if (calRes.data && calRes.data.length > 0) setSelectedMonth(calRes.data[0].month);
+    setLoading(false);
+  };
+
+  const shiftOptions = [...new Set(employees.map((e) => e.shift).filter(Boolean))];
+
+  const openEntry = async (entry) => {
+    setSelectedEntry(entry);
+    setSelectedSession(null);
+    setNewShift((me && me.shift) || shiftOptions[0] || "");
+    const { data } = await supabaseClient
+      .from("training_sessions")
+      .select("id, session_date, shift, foreman_id")
+      .eq("calendar_id", entry.id)
+      .order("session_date", { ascending: false });
+    setSessions(data || []);
+  };
+
+  const createSession = async () => {
+    if (!newDate || !newShift) {
+      alert("กรุณาเลือกวันที่และกะ");
+      return;
+    }
+    const { data, error } = await supabaseClient
+      .from("training_sessions")
+      .insert({
+        calendar_id: selectedEntry.id,
+        foreman_id: me ? me.id : null,
+        session_date: newDate,
+        shift: newShift,
+      })
+      .select()
+      .single();
+    if (error) {
+      alert("สร้าง session ไม่สำเร็จ: " + error.message);
+      return;
+    }
+    setSessions([data, ...sessions]);
+    openSession(data);
+  };
+
+  const openSession = async (sess) => {
+    setSelectedSession(sess);
+    const map = {};
+    employees
+      .filter((e) => e.shift === sess.shift)
+      .forEach((e) => {
+        map[e.id] = { status: "present", note: "" };
+      });
+    const { data } = await supabaseClient
+      .from("session_attendance")
+      .select("employee_id, status, note")
+      .eq("session_id", sess.id);
+    (data || []).forEach((r) => {
+      map[r.employee_id] = { status: r.status || "present", note: r.note || "" };
+    });
+    setAttendance(map);
+  };
+
+  const toggleStatus = (empId) => {
+    setAttendance((prev) => ({
+      ...prev,
+      [empId]: {
+        ...prev[empId],
+        status: prev[empId].status === "present" ? "absent" : "present",
+      },
+    }));
+  };
+
+  const setNote = (empId, note) => {
+    setAttendance((prev) => ({ ...prev, [empId]: { ...prev[empId], note } }));
+  };
+
+  const addEmployee = (empId) => {
+    if (!empId || attendance[empId]) return;
+    setAttendance((prev) => ({ ...prev, [empId]: { status: "present", note: "" } }));
+  };
+
+  const removeEmployee = (empId) => {
+    setAttendance((prev) => {
+      const copy = { ...prev };
+      delete copy[empId];
+      return copy;
+    });
+  };
+
+  const saveAttendance = async () => {
+    const rows = Object.entries(attendance).map(([employee_id, v]) => ({
+      session_id: selectedSession.id,
+      employee_id,
+      status: v.status,
+      note: v.note || null,
+      confirmed_at: new Date().toISOString(),
+    }));
+    if (rows.length === 0) {
+      alert("ยังไม่มีรายชื่อให้บันทึก");
+      return;
+    }
+    setSavingMsg("กำลังบันทึก...");
+    const { error } = await supabaseClient
+      .from("session_attendance")
+      .upsert(rows, { onConflict: "session_id,employee_id" });
+    if (error) {
+      setSavingMsg("");
+      alert("บันทึกไม่สำเร็จ: " + error.message);
+      return;
+    }
+    setSavingMsg("บันทึกแล้ว ✓");
+    setTimeout(() => setSavingMsg(""), 2500);
+  };
+
+  if (loading) return <div className="page">กำลังโหลด...</div>;
+
+  // ----- หน้าจอ 3: มาร์คการเข้าอบรม -----
+  if (selectedSession) {
+    const defaultIds = new Set(
+      employees.filter((e) => e.shift === selectedSession.shift).map((e) => e.id)
+    );
+    const markedIds = Object.keys(attendance);
+    const extraIds = markedIds.filter((id) => !defaultIds.has(id));
+    const notAddedYet = employees.filter((e) => !attendance[e.id]);
+
+    return (
+      <div className="page">
+        <button className="secondary" onClick={() => setSelectedSession(null)}>
+          ← กลับไปเลือก session
+        </button>
+        <h2 style={{ marginTop: 16 }}>
+          {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
+        </h2>
+        <p style={{ color: "#667085" }}>
+          วันที่ {selectedSession.session_date} · กะ {selectedSession.shift || "-"}
+        </p>
+
+        <h3>รายชื่อ (กะ {selectedSession.shift || "-"})</h3>
+        {defaultIds.size === 0 && (
+          <p style={{ color: "#667085" }}>ไม่พบพนักงานกะนี้</p>
+        )}
+        {employees
+          .filter((e) => defaultIds.has(e.id))
+          .map((e) => (
+            <AttendanceRow
+              key={e.id}
+              emp={e}
+              data={attendance[e.id]}
+              onToggle={() => toggleStatus(e.id)}
+              onNote={(n) => setNote(e.id, n)}
+            />
+          ))}
+
+        {extraIds.length > 0 && (
+          <React.Fragment>
+            <h3 style={{ marginTop: 20 }}>เพิ่มเติมนอกกะ</h3>
+            {employees
+              .filter((e) => extraIds.includes(e.id))
+              .map((e) => (
+                <AttendanceRow
+                  key={e.id}
+                  emp={e}
+                  data={attendance[e.id]}
+                  onToggle={() => toggleStatus(e.id)}
+                  onNote={(n) => setNote(e.id, n)}
+                  onRemove={() => removeEmployee(e.id)}
+                />
+              ))}
+          </React.Fragment>
+        )}
+
+        <div style={{ marginTop: 20 }}>
+          <select
+            onChange={(e) => {
+              addEmployee(e.target.value);
+              e.target.value = "";
+            }}
+            defaultValue=""
+          >
+            <option value="" disabled>+ เพิ่มพนักงานคนอื่น...</option>
+            {notAddedYet.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name} ({e.employee_code}){e.shift ? " - กะ" + e.shift : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={saveAttendance}>บันทึกการเข้าอบรม</button>
+          {savingMsg && <span style={{ color: "#067647" }}>{savingMsg}</span>}
+        </div>
+      </div>
+    );
+  }
+
+  // ----- หน้าจอ 2: เลือก / สร้าง session -----
+  if (selectedEntry) {
+    return (
+      <div className="page">
+        <button className="secondary" onClick={() => setSelectedEntry(null)}>
+          ← กลับไปเลือกหลักสูตร
+        </button>
+        <h2 style={{ marginTop: 16 }}>
+          {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
+        </h2>
+        <p style={{ color: "#667085" }}>
+          {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}
+        </p>
+
+        <h3>Session ที่มีอยู่</h3>
+        {sessions.length === 0 && (
+          <p style={{ color: "#667085" }}>ยังไม่มี session สำหรับหลักสูตรนี้</p>
+        )}
+        {sessions.map((s) => (
+          <div className="course-card" key={s.id} onClick={() => openSession(s)}>
+            <div style={{ fontWeight: 600 }}>{s.session_date}</div>
+            <span className="badge ok">กะ {s.shift || "-"}</span>
+          </div>
+        ))}
+
+        <h3 style={{ marginTop: 24 }}>สร้าง session ใหม่</h3>
+        <div className="new-session-row">
+          <input
+            type="date"
+            value={newDate}
+            onChange={(e) => setNewDate(e.target.value)}
+          />
+          <select value={newShift} onChange={(e) => setNewShift(e.target.value)}>
+            <option value="" disabled>เลือกกะ</option>
+            {shiftOptions.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <button onClick={createSession}>สร้าง + เริ่มมาร์ค</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ----- หน้าจอ 1: เลือกหลักสูตร/เดือน -----
+  const months = [...new Set(calendarRows.map((r) => r.month))].sort((a, b) => a - b);
+  const rowsThisMonth = calendarRows.filter((r) => r.month === selectedMonth);
+
+  return (
+    <div className="page">
+      <h2>เลือกหลักสูตรที่จะมาร์คการเข้าอบรม</h2>
+      <div className="month-tabs">
+        {months.map((m) => (
+          <div
+            key={m}
+            className={"month-tab" + (m === selectedMonth ? " active" : "")}
+            onClick={() => setSelectedMonth(m)}
+          >
+            {MONTH_NAMES[m]}
+          </div>
+        ))}
+      </div>
+      {rowsThisMonth.length === 0 ? (
+        <p style={{ color: "#667085" }}>ไม่มีหลักสูตรจัดสอนเดือนนี้</p>
+      ) : (
+        rowsThisMonth.map((entry) => (
+          <div className="course-card" key={entry.id} onClick={() => openEntry(entry)}>
+            <div style={{ fontWeight: 600 }}>
+              {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 // ---- หน้ารวม แยกตาม role ----
 function Dashboard({ session, role, onLogout }) {
   const roleLabel = { admin: "แอดมิน (เจ้าหน้าที่)", foreman: "Foreman", employee: "พนักงาน" }[role] || role;
@@ -331,8 +706,9 @@ function Dashboard({ session, role, onLogout }) {
       </div>
 
       {role === "admin" && <AdminCalendarPage />}
+      {role === "foreman" && <ForemanPage session={session} />}
 
-      {role !== "admin" && (
+      {role === "employee" && (
         <div className="page">
           <p style={{ color: "#667085" }}>
             หน้าเมนูของบทบาทนี้จะถูกสร้างในขั้นตอนถัดไป
