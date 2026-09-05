@@ -7,13 +7,14 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; }
   body {
     font-family: -apple-system, "Segoe UI", "Sarabun", sans-serif;
     background: #f2f4f7;
     margin: 0;
+    color: #1d2939;
   }
   .container {
     max-width: 380px;
@@ -22,6 +23,11 @@
     padding: 28px;
     border-radius: 16px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  .page {
+    max-width: 760px;
+    margin: 24px auto;
+    padding: 0 16px 40px;
   }
   h2 { margin-top: 0; }
   input {
@@ -33,16 +39,15 @@
     border-radius: 10px;
   }
   button {
-    width: 100%;
-    padding: 14px;
-    font-size: 18px;
+    padding: 12px 18px;
+    font-size: 16px;
     background: #2563eb;
     color: white;
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    margin-top: 8px;
   }
+  button.secondary { background: #e4e7ec; color: #344054; }
   button:disabled { background: #93b4f0; }
   .error { color: #dc2626; margin-top: 10px; font-size: 14px; }
   .role-badge {
@@ -54,6 +59,51 @@
     font-size: 14px;
     margin-bottom: 16px;
   }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .month-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 20px 0;
+  }
+  .month-tab {
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: white;
+    border: 1px solid #d0d5dd;
+    cursor: pointer;
+    color: #344054;
+  }
+  .month-tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+  .course-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    cursor: pointer;
+  }
+  .course-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .badge {
+    display: inline-block;
+    font-size: 13px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    margin-right: 6px;
+  }
+  .badge.ok { background: #ecfdf3; color: #067647; }
+  .badge.warn { background: #fef3f2; color: #b42318; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eaecf0; font-size: 14px; }
+  .pass { color: #067647; font-weight: 600; }
+  .fail { color: #b42318; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -67,6 +117,10 @@ const SUPABASE_KEY = "sb_publishable_Iyv8GG8ufYUdwG8U8BF5tg_tu8qJuw_";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const MONTH_NAMES = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+  "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+// ---- หน้า Login ----
 function LoginPage({ onLogin }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -101,7 +155,7 @@ function LoginPage({ onLogin }) {
         onKeyDown={(e) => e.key === "Enter" && handleLogin()}
         autoFocus
       />
-      <button onClick={handleLogin} disabled={loading}>
+      <button style={{ width: "100%" }} onClick={handleLogin} disabled={loading}>
         {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
       </button>
       {error && <div className="error">{error}</div>}
@@ -109,17 +163,180 @@ function LoginPage({ onLogin }) {
   );
 }
 
+// ---- หน้าปฏิทินอบรม (แอดมิน) ----
+function AdminCalendarPage() {
+  const [year] = useState(2026);
+  const [calendarRows, setCalendarRows] = useState([]);
+  const [materialsByCourse, setMaterialsByCourse] = useState({});
+  const [examsByCourse, setExamsByCourse] = useState({});
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [completionRows, setCompletionRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadAll();
+  }, []);
+
+  const loadAll = async () => {
+    setLoading(true);
+    const [calRes, matRes, examRes] = await Promise.all([
+      supabaseClient
+        .from("training_calendar")
+        .select("id, year, month, course_id, courses(name)")
+        .eq("year", year)
+        .order("month"),
+      supabaseClient.from("course_materials").select("course_id"),
+      supabaseClient.from("exams").select("id, course_id"),
+    ]);
+
+    setCalendarRows(calRes.data || []);
+
+    const matCount = {};
+    (matRes.data || []).forEach((r) => {
+      matCount[r.course_id] = (matCount[r.course_id] || 0) + 1;
+    });
+    setMaterialsByCourse(matCount);
+
+    const examCount = {};
+    (examRes.data || []).forEach((r) => {
+      examCount[r.course_id] = (examCount[r.course_id] || 0) + 1;
+    });
+    setExamsByCourse(examCount);
+
+    if (calRes.data && calRes.data.length > 0 && selectedMonth === null) {
+      setSelectedMonth(calRes.data[0].month);
+    }
+    setLoading(false);
+  };
+
+  const openEntry = async (entry) => {
+    setSelectedEntry(entry);
+    const { data } = await supabaseClient
+      .from("v_course_completion")
+      .select("employee_name, employee_code, total_exams, passed_exams, completed")
+      .eq("calendar_id", entry.id)
+      .order("employee_name");
+    setCompletionRows(data || []);
+  };
+
+  if (loading) return <div className="page">กำลังโหลดปฏิทิน...</div>;
+
+  const months = [...new Set(calendarRows.map((r) => r.month))].sort((a, b) => a - b);
+  const rowsThisMonth = calendarRows.filter((r) => r.month === selectedMonth);
+
+  if (selectedEntry) {
+    const matCount = materialsByCourse[selectedEntry.course_id] || 0;
+    const examCount = examsByCourse[selectedEntry.course_id] || 0;
+    return (
+      <div className="page">
+        <button className="secondary" onClick={() => setSelectedEntry(null)}>
+          ← กลับไปปฏิทิน
+        </button>
+        <h2 style={{ marginTop: 16 }}>
+          {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
+        </h2>
+        <p>
+          {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}
+        </p>
+        <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>
+          เอกสาร {matCount} ไฟล์
+        </span>
+        <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>
+          ข้อสอบ {examCount} ชุด
+        </span>
+
+        <h3 style={{ marginTop: 24 }}>คะแนนพนักงาน</h3>
+        {completionRows.length === 0 ? (
+          <p style={{ color: "#667085" }}>ยังไม่มีใครทำข้อสอบในรอบนี้</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>รหัส</th>
+                <th>ชื่อ</th>
+                <th>ผ่าน/ทั้งหมด</th>
+                <th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {completionRows.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.employee_code}</td>
+                  <td>{r.employee_name}</td>
+                  <td>{r.passed_exams} / {r.total_exams}</td>
+                  <td className={r.completed ? "pass" : "fail"}>
+                    {r.completed ? "ผ่านครบ" : "ยังไม่ผ่าน"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="page">
+      <h2>ปฏิทินอบรม ปี {year}</h2>
+      <div className="month-tabs">
+        {months.map((m) => (
+          <div
+            key={m}
+            className={"month-tab" + (m === selectedMonth ? " active" : "")}
+            onClick={() => setSelectedMonth(m)}
+          >
+            {MONTH_NAMES[m]}
+          </div>
+        ))}
+      </div>
+
+      {rowsThisMonth.length === 0 ? (
+        <p style={{ color: "#667085" }}>ไม่มีหลักสูตรจัดสอนเดือนนี้</p>
+      ) : (
+        rowsThisMonth.map((entry) => {
+          const matCount = materialsByCourse[entry.course_id] || 0;
+          const examCount = examsByCourse[entry.course_id] || 0;
+          return (
+            <div className="course-card" key={entry.id} onClick={() => openEntry(entry)}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+              </div>
+              <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>
+                เอกสาร {matCount}
+              </span>
+              <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>
+                ข้อสอบ {examCount}
+              </span>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ---- หน้ารวม แยกตาม role ----
 function Dashboard({ session, role, onLogout }) {
   const roleLabel = { admin: "แอดมิน (เจ้าหน้าที่)", foreman: "Foreman", employee: "พนักงาน" }[role] || role;
 
   return (
-    <div className="container">
-      <div className="role-badge">{roleLabel}</div>
-      <h2>ยินดีต้อนรับ</h2>
-      <p style={{ color: "#667085" }}>
-        เข้าสู่ระบบสำเร็จ — หน้าเมนูจริงของบทบาทนี้จะถูกสร้างในขั้นตอนถัดไป
-      </p>
-      <button onClick={onLogout}>ออกจากระบบ</button>
+    <div>
+      <div className="topbar">
+        <span className="role-badge">{roleLabel}</span>
+        <button className="secondary" onClick={onLogout}>ออกจากระบบ</button>
+      </div>
+
+      {role === "admin" && <AdminCalendarPage />}
+
+      {role !== "admin" && (
+        <div className="page">
+          <p style={{ color: "#667085" }}>
+            หน้าเมนูของบทบาทนี้จะถูกสร้างในขั้นตอนถัดไป
+          </p>
+        </div>
+      )}
     </div>
   );
 }
