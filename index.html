@@ -936,6 +936,11 @@ function EmployeePage({ session }) {
 function Dashboard({ session, role, onLogout }) {
   const roleLabel = { admin: "แอดมิน (เจ้าหน้าที่)", foreman: "Foreman", employee: "พนักงาน" }[role] || role;
 
+  // admin/foreman มีหน้าที่หลักของตัวเอง + ต้องสอบด้วยเหมือนกัน จึงมีแท็บให้สลับ
+  // employee มีแค่หน้าสอบอย่างเดียว ไม่ต้องมีแท็บ
+  const hasMainDuty = role === "admin" || role === "foreman";
+  const [activeTab, setActiveTab] = useState("main");
+
   return (
     <div>
       <div className="topbar">
@@ -943,8 +948,28 @@ function Dashboard({ session, role, onLogout }) {
         <button className="secondary" onClick={onLogout}>ออกจากระบบ</button>
       </div>
 
-      {role === "admin" && <AdminCalendarPage />}
-      {role === "foreman" && <ForemanPage session={session} />}
+      {hasMainDuty && (
+        <div className="page" style={{ paddingBottom: 0 }}>
+          <div className="month-tabs">
+            <div
+              className={"month-tab" + (activeTab === "main" ? " active" : "")}
+              onClick={() => setActiveTab("main")}
+            >
+              งานของฉัน
+            </div>
+            <div
+              className={"month-tab" + (activeTab === "exam" ? " active" : "")}
+              onClick={() => setActiveTab("exam")}
+            >
+              สอบของฉัน
+            </div>
+          </div>
+        </div>
+      )}
+
+      {role === "admin" && activeTab === "main" && <AdminCalendarPage />}
+      {role === "foreman" && activeTab === "main" && <ForemanPage session={session} />}
+      {hasMainDuty && activeTab === "exam" && <EmployeePage session={session} />}
 
       {role === "employee" && <EmployeePage session={session} />}
     </div>
