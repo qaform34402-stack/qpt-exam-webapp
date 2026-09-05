@@ -353,7 +353,9 @@ function AdminCalendarPage() {
 
 // ---- แถวมาร์คการเข้าอบรมของพนักงาน 1 คน ----
 function AttendanceRow({ emp, data, onToggle, onNote, onRemove }) {
-  const present = data.status === "present";
+  // กันไว้เผื่อ data ยังไม่มา (ไม่ควรเกิดขึ้นแล้วหลังแก้ openSession แต่กันพลาดไว้)
+  const safeData = data || { status: "present", note: "" };
+  const present = safeData.status === "present";
   return (
     <div className="attendance-row">
       <div style={{ flex: 1 }}>
@@ -372,7 +374,7 @@ function AttendanceRow({ emp, data, onToggle, onNote, onRemove }) {
         type="text"
         className="note-input"
         placeholder="หมายเหตุ"
-        value={data.note || ""}
+        value={safeData.note || ""}
         onChange={(e) => onNote(e.target.value)}
       />
       {onRemove && (
@@ -466,21 +468,34 @@ function ForemanPage({ session }) {
   };
 
   const openSession = async (sess) => {
-    setSelectedSession(sess);
-    const map = {};
+    // สร้างรายชื่อ default (พนักงานกะเดียวกัน = "มา") และ set ทันที
+    // ก่อนไปดึงข้อมูลเก่า เพื่อไม่ให้มีช่วงที่หน้าจอ render โดยไม่มีข้อมูล attendance เลย
+    const defaultMap = {};
     employees
       .filter((e) => e.shift === sess.shift)
       .forEach((e) => {
-        map[e.id] = { status: "present", note: "" };
+        defaultMap[e.id] = { status: "present", note: "" };
       });
-    const { data } = await supabaseClient
+    setSelectedSession(sess);
+    setAttendance(defaultMap);
+
+    const { data, error } = await supabaseClient
       .from("session_attendance")
       .select("employee_id, status, note")
       .eq("session_id", sess.id);
-    (data || []).forEach((r) => {
-      map[r.employee_id] = { status: r.status || "present", note: r.note || "" };
-    });
-    setAttendance(map);
+    if (error) {
+      console.error("โหลดข้อมูลการเข้าอบรมเดิมไม่สำเร็จ:", error.message);
+      return;
+    }
+    if (data && data.length > 0) {
+      setAttendance((prev) => {
+        const merged = { ...prev };
+        data.forEach((r) => {
+          merged[r.employee_id] = { status: r.status || "present", note: r.note || "" };
+        });
+        return merged;
+      });
+    }
   };
 
   const toggleStatus = (empId) => {
@@ -771,7 +786,36 @@ function App() {
   return <Dashboard session={session} role={role} onLogout={handleLogout} />;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+// ---- กันหน้าเปล่า: ถ้ามี error เกิดขึ้นระหว่าง render ให้ขึ้นข้อความแทนที่จะเป็นหน้าว่างๆ ----
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, message: (error && error.message) || "เกิดข้อผิดพลาด" };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="container">
+          <h2>เกิดข้อผิดพลาด</h2>
+          <p style={{ color: "#667085" }}>{this.state.message}</p>
+          <button style={{ width: "100%" }} onClick={() => window.location.reload()}>
+            โหลดหน้าใหม่
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
 </script>
 </body>
 </html>
