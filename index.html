@@ -849,12 +849,10 @@ function EmployeePage({ session }) {
       alert("ยังไม่มีลิงก์ข้อสอบสำหรับวิชานี้");
       return;
     }
-    let url = exam.exam_form_url;
-    if (exam.plan_id_entry) {
-      const sep = url.includes("?") ? "&" : "?";
-      url = url + sep + exam.plan_id_entry + "=" + encodeURIComponent(selectedEntry.id);
-    }
-    window.open(url, "_blank");
+    // หมายเหตุ: exam_form_url ที่ import มาแล้ว prefill รหัสข้อสอบ (exam_id) ไว้ในตัวเองสมบูรณ์แล้ว
+    // ระบบเช็คว่าอยู่เดือนไหนจาก exam_attempts.submitted_at เทียบกับ training_calendar
+    // ไม่ได้ใช้ calendar_id/Plan_ID มาจับคู่ จึงไม่ต้องต่อพารามิเตอร์อะไรเพิ่มที่นี่
+    window.open(exam.exam_form_url, "_blank");
   };
 
   if (loading) return <div className="page">กำลังโหลด...</div>;
