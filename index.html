@@ -709,6 +709,231 @@ function ForemanPage({ session }) {
   );
 }
 
+// ---- แถวแสดงสถานะข้อสอบ 1 วิชา (หน้าพนักงาน) ----
+function ExamStatusRow({ exam, attempt, onTakeExam }) {
+  const everPassed = attempt ? !!attempt.everPassed : false;
+  const latest = attempt ? attempt.latest : null;
+
+  let statusBadge;
+  if (everPassed) {
+    statusBadge = <span className="badge ok">ผ่านแล้ว</span>;
+  } else if (latest) {
+    statusBadge = <span className="badge warn">ยังไม่ผ่าน</span>;
+  } else {
+    statusBadge = <span className="badge warn">ยังไม่สอบ</span>;
+  }
+
+  return (
+    <div className="attendance-row">
+      <div style={{ flex: 1 }}>
+        <div className="name">{exam.exam_name}</div>
+        <div className="meta">
+          {latest ? "คะแนนล่าสุด " + latest.raw_score + " / " + latest.max_score : "ยังไม่มีการสอบ"}
+          {latest && latest.attempt_no ? " · ครั้งที่ " + latest.attempt_no : ""}
+        </div>
+      </div>
+      {statusBadge}
+      <button onClick={() => onTakeExam(exam)}>เข้าสอบ</button>
+    </div>
+  );
+}
+
+// ---- หน้าพนักงาน: ดูหลักสูตร + เข้าสอบ ----
+function EmployeePage({ session }) {
+  const [me, setMe] = useState(null);
+  const [calendarRows, setCalendarRows] = useState([]);
+  const [examsByCourse, setExamsByCourse] = useState({});
+  const [completionMap, setCompletionMap] = useState({});
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [courseExams, setCourseExams] = useState([]);
+  const [attemptsByExam, setAttemptsByExam] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  useEffect(() => {
+    loadInitial();
+  }, []);
+
+  const loadInitial = async () => {
+    setLoading(true);
+    const code = session.user.email.split("@")[0];
+    const [meRes, calRes, examRes] = await Promise.all([
+      supabaseClient
+        .from("employees")
+        .select("id, employee_code, name, shift")
+        .eq("employee_code", code)
+        .single(),
+      supabaseClient
+        .from("training_calendar")
+        .select("id, year, month, course_id, courses(name)")
+        .order("year")
+        .order("month"),
+      supabaseClient.from("exams").select("id, course_id"),
+    ]);
+
+    setMe(meRes.data || null);
+    setCalendarRows(calRes.data || []);
+
+    const examCount = {};
+    (examRes.data || []).forEach((r) => {
+      examCount[r.course_id] = (examCount[r.course_id] || 0) + 1;
+    });
+    setExamsByCourse(examCount);
+
+    // โหลดสถานะผ่าน/ไม่ผ่านของตัวเองต่อ calendar entry (จาก view สำเร็จรูป)
+    if (code) {
+      const { data: compData } = await supabaseClient
+        .from("v_course_completion")
+        .select("calendar_id, total_exams, passed_exams, completed")
+        .eq("employee_code", code);
+      const map = {};
+      (compData || []).forEach((r) => {
+        map[r.calendar_id] = r;
+      });
+      setCompletionMap(map);
+    }
+
+    // default = เดือนปัจจุบันจริงๆ ถ้ามีข้อมูลเดือนนั้น ไม่งั้น fallback เดือนแรกที่มี
+    const now = new Date();
+    const thisMonth = now.getMonth() + 1;
+    const months = [...new Set((calRes.data || []).map((r) => r.month))];
+    if (months.includes(thisMonth)) {
+      setSelectedMonth(thisMonth);
+    } else if (calRes.data && calRes.data.length > 0) {
+      setSelectedMonth(calRes.data[0].month);
+    }
+    setLoading(false);
+  };
+
+  const openEntry = async (entry) => {
+    setSelectedEntry(entry);
+    setLoadingDetail(true);
+    const { data: exams } = await supabaseClient
+      .from("exams")
+      .select("id, exam_name, exam_form_url, plan_id_entry")
+      .eq("course_id", entry.course_id)
+      .order("exam_name");
+    setCourseExams(exams || []);
+
+    if (me && exams && exams.length > 0) {
+      const examIds = exams.map((e) => e.id);
+      const { data: attempts } = await supabaseClient
+        .from("exam_attempts")
+        .select("exam_id, raw_score, max_score, passed, attempt_no")
+        .eq("employee_id", me.id)
+        .in("exam_id", examIds);
+
+      const grouped = {};
+      (attempts || []).forEach((a) => {
+        if (!grouped[a.exam_id]) grouped[a.exam_id] = [];
+        grouped[a.exam_id].push(a);
+      });
+      const summary = {};
+      Object.keys(grouped).forEach((examId) => {
+        const list = grouped[examId].sort((x, y) => (y.attempt_no || 0) - (x.attempt_no || 0));
+        summary[examId] = {
+          latest: list[0],
+          everPassed: list.some((a) => a.passed),
+        };
+      });
+      setAttemptsByExam(summary);
+    } else {
+      setAttemptsByExam({});
+    }
+    setLoadingDetail(false);
+  };
+
+  const handleTakeExam = (exam) => {
+    if (!exam.exam_form_url) {
+      alert("ยังไม่มีลิงก์ข้อสอบสำหรับวิชานี้");
+      return;
+    }
+    let url = exam.exam_form_url;
+    if (exam.plan_id_entry) {
+      const sep = url.includes("?") ? "&" : "?";
+      url = url + sep + exam.plan_id_entry + "=" + encodeURIComponent(selectedEntry.id);
+    }
+    window.open(url, "_blank");
+  };
+
+  if (loading) return <div className="page">กำลังโหลด...</div>;
+
+  // ----- หน้าจอ 2: รายวิชา + เข้าสอบ -----
+  if (selectedEntry) {
+    return (
+      <div className="page">
+        <button className="secondary" onClick={() => setSelectedEntry(null)}>
+          ← กลับไปเลือกหลักสูตร
+        </button>
+        <h2 style={{ marginTop: 16 }}>
+          {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
+        </h2>
+        <p style={{ color: "#667085" }}>
+          {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}
+        </p>
+
+        {loadingDetail ? (
+          <p style={{ color: "#667085" }}>กำลังโหลดรายวิชา...</p>
+        ) : courseExams.length === 0 ? (
+          <p style={{ color: "#667085" }}>ยังไม่มีข้อสอบสำหรับหลักสูตรนี้</p>
+        ) : (
+          courseExams.map((exam) => (
+            <ExamStatusRow
+              key={exam.id}
+              exam={exam}
+              attempt={attemptsByExam[exam.id]}
+              onTakeExam={handleTakeExam}
+            />
+          ))
+        )}
+      </div>
+    );
+  }
+
+  // ----- หน้าจอ 1: เลือกหลักสูตร/เดือน -----
+  const months = [...new Set(calendarRows.map((r) => r.month))].sort((a, b) => a - b);
+  const rowsThisMonth = calendarRows.filter((r) => r.month === selectedMonth);
+
+  return (
+    <div className="page">
+      <h2>หลักสูตรของฉัน</h2>
+      <div className="month-tabs">
+        {months.map((m) => (
+          <div
+            key={m}
+            className={"month-tab" + (m === selectedMonth ? " active" : "")}
+            onClick={() => setSelectedMonth(m)}
+          >
+            {MONTH_NAMES[m]}
+          </div>
+        ))}
+      </div>
+
+      {rowsThisMonth.length === 0 ? (
+        <p style={{ color: "#667085" }}>ไม่มีหลักสูตรจัดสอนเดือนนี้</p>
+      ) : (
+        rowsThisMonth.map((entry) => {
+          const comp = completionMap[entry.id];
+          const total = comp ? comp.total_exams : examsByCourse[entry.course_id] || 0;
+          const passedCount = comp ? comp.passed_exams : 0;
+          const completed = comp ? comp.completed : false;
+          return (
+            <div className="course-card" key={entry.id} onClick={() => openEntry(entry)}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>
+                {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+              </div>
+              <span className={"badge " + (completed ? "ok" : "warn")}>
+                {passedCount} / {total} ผ่านแล้ว
+              </span>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 // ---- หน้ารวม แยกตาม role ----
 function Dashboard({ session, role, onLogout }) {
   const roleLabel = { admin: "แอดมิน (เจ้าหน้าที่)", foreman: "Foreman", employee: "พนักงาน" }[role] || role;
@@ -723,13 +948,7 @@ function Dashboard({ session, role, onLogout }) {
       {role === "admin" && <AdminCalendarPage />}
       {role === "foreman" && <ForemanPage session={session} />}
 
-      {role === "employee" && (
-        <div className="page">
-          <p style={{ color: "#667085" }}>
-            หน้าเมนูของบทบาทนี้จะถูกสร้างในขั้นตอนถัดไป
-          </p>
-        </div>
-      )}
+      {role === "employee" && <EmployeePage session={session} />}
     </div>
   );
 }
