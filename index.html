@@ -115,7 +115,9 @@ const { useState, useEffect } = React;
 const SUPABASE_URL = "https://wpaghjsgvjueqfjaxkyw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Iyv8GG8ufYUdwG8U8BF5tg_tu8qJuw_";
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: false },
+});
 
 const MONTH_NAMES = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
@@ -367,6 +369,26 @@ function App() {
     setSession(null);
     setRole(null);
   };
+
+  // ออกจากระบบอัตโนมัติถ้าไม่มีการใช้งาน 3 นาที
+  // (สำคัญมากสำหรับแท็บเล็ตที่ใช้ร่วมกันหลายคน กันคนถัดไปเห็น session ค้าง)
+  useEffect(() => {
+    if (!session) return;
+    let timer;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        handleLogout();
+      }, 3 * 60 * 1000);
+    };
+    const events = ["click", "keydown", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, resetTimer));
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, [session]);
 
   if (loadingSession) return <div className="container">กำลังโหลด...</div>;
   if (!session) return <LoginPage onLogin={applySession} />;
