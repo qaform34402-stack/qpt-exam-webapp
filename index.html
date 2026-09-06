@@ -136,6 +136,19 @@
     align-items: center;
   }
   .new-session-row input, .new-session-row select { width: auto; margin: 0; }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .refresh-btn {
+    background: #e4e7ec;
+    color: #344054;
+    padding: 8px 14px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
 </style>
 </head>
 <body>
@@ -264,9 +277,14 @@ function AdminCalendarPage() {
     const examCount = examsByCourse[selectedEntry.course_id] || 0;
     return (
       <div className="page">
-        <button className="secondary" onClick={() => setSelectedEntry(null)}>
-          ← กลับไปปฏิทิน
-        </button>
+        <div className="header-row">
+          <button className="secondary" onClick={() => setSelectedEntry(null)}>
+            ← กลับไปปฏิทิน
+          </button>
+          <button className="refresh-btn" onClick={() => openEntry(selectedEntry)}>
+            🔄 รีเฟรช
+          </button>
+        </div>
         <h2 style={{ marginTop: 16 }}>
           {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
         </h2>
@@ -313,7 +331,10 @@ function AdminCalendarPage() {
 
   return (
     <div className="page">
-      <h2>ปฏิทินอบรม ปี {year}</h2>
+      <div className="header-row">
+        <h2>ปฏิทินอบรม ปี {year}</h2>
+        <button className="refresh-btn" onClick={loadAll}>🔄 รีเฟรช</button>
+      </div>
       <div className="month-tabs">
         {months.map((m) => (
           <div
@@ -563,9 +584,14 @@ function ForemanPage({ session }) {
 
     return (
       <div className="page">
-        <button className="secondary" onClick={() => setSelectedSession(null)}>
-          ← กลับไปเลือก session
-        </button>
+        <div className="header-row">
+          <button className="secondary" onClick={() => setSelectedSession(null)}>
+            ← กลับไปเลือก session
+          </button>
+          <button className="refresh-btn" onClick={() => openSession(selectedSession)}>
+            🔄 รีเฟรช
+          </button>
+        </div>
         <h2 style={{ marginTop: 16 }}>
           {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
         </h2>
@@ -636,9 +662,14 @@ function ForemanPage({ session }) {
   if (selectedEntry) {
     return (
       <div className="page">
-        <button className="secondary" onClick={() => setSelectedEntry(null)}>
-          ← กลับไปเลือกหลักสูตร
-        </button>
+        <div className="header-row">
+          <button className="secondary" onClick={() => setSelectedEntry(null)}>
+            ← กลับไปเลือกหลักสูตร
+          </button>
+          <button className="refresh-btn" onClick={() => openEntry(selectedEntry)}>
+            🔄 รีเฟรช
+          </button>
+        </div>
         <h2 style={{ marginTop: 16 }}>
           {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
         </h2>
@@ -682,7 +713,10 @@ function ForemanPage({ session }) {
 
   return (
     <div className="page">
-      <h2>เลือกหลักสูตรที่จะมาร์คการเข้าอบรม</h2>
+      <div className="header-row">
+        <h2>เลือกหลักสูตรที่จะมาร์คการเข้าอบรม</h2>
+        <button className="refresh-btn" onClick={loadInitial}>🔄 รีเฟรช</button>
+      </div>
       <div className="month-tabs">
         {months.map((m) => (
           <div
@@ -861,9 +895,14 @@ function EmployeePage({ session }) {
   if (selectedEntry) {
     return (
       <div className="page">
-        <button className="secondary" onClick={() => setSelectedEntry(null)}>
-          ← กลับไปเลือกหลักสูตร
-        </button>
+        <div className="header-row">
+          <button className="secondary" onClick={() => setSelectedEntry(null)}>
+            ← กลับไปเลือกหลักสูตร
+          </button>
+          <button className="refresh-btn" onClick={() => openEntry(selectedEntry)}>
+            🔄 รีเฟรช
+          </button>
+        </div>
         <h2 style={{ marginTop: 16 }}>
           {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
         </h2>
@@ -895,7 +934,10 @@ function EmployeePage({ session }) {
 
   return (
     <div className="page">
-      <h2>หลักสูตรของฉัน</h2>
+      <div className="header-row">
+        <h2>หลักสูตรของฉัน</h2>
+        <button className="refresh-btn" onClick={loadInitial}>🔄 รีเฟรช</button>
+      </div>
       <div className="month-tabs">
         {months.map((m) => (
           <div
