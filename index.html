@@ -227,10 +227,22 @@ function AdminCalendarPage() {
   const [backupStatus, setBackupStatus] = useState(""); // "", "loading", "success", "error"
   const [backupMessage, setBackupMessage] = useState("");
   const [backupUrl, setBackupUrl] = useState("");
+  const [lastBackupRunAt, setLastBackupRunAt] = useState(null); // Date | null
 
   useEffect(() => {
     loadAll();
+    loadLastBackupStatus();
   }, []);
+
+  const loadLastBackupStatus = async () => {
+    const { data } = await supabaseClient
+      .from("backup_runs")
+      .select("run_at")
+      .order("run_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setLastBackupRunAt(data ? new Date(data.run_at) : null);
+  };
 
   const handleBackup = async () => {
     setBackupStatus("loading");
@@ -246,6 +258,7 @@ function AdminCalendarPage() {
           .join(", ");
         setBackupMessage("บันทึกสำเร็จ (" + counts + ")");
         setBackupUrl(data.spreadsheetUrl || "");
+        setLastBackupRunAt(new Date()); // อัปเดตสถานะทันที ไม่ต้องรอ fetch ใหม่
       } else {
         setBackupStatus("error");
         setBackupMessage("บันทึกไม่สำเร็จ: " + (data.error || "ไม่ทราบสาเหตุ"));
@@ -360,6 +373,11 @@ function AdminCalendarPage() {
     );
   }
 
+  const now = new Date();
+  const backedUpThisMonth = lastBackupRunAt
+    && lastBackupRunAt.getFullYear() === now.getFullYear()
+    && lastBackupRunAt.getMonth() === now.getMonth();
+
   return (
     <div className="page">
       <div className="header-row">
@@ -374,6 +392,20 @@ function AdminCalendarPage() {
           </button>
           <button className="refresh-btn" onClick={loadAll}>🔄 รีเฟรช</button>
         </div>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        {backedUpThisMonth ? (
+          <span className="badge ok">
+            ✅ backup ข้อมูลเดือน {MONTH_NAMES[now.getMonth() + 1]} {now.getFullYear()} แล้ว
+            {" "}(ล่าสุด {lastBackupRunAt.toLocaleDateString("th-TH")})
+          </span>
+        ) : (
+          <span className="badge warn">
+            ⚠️ ยังไม่ได้ backup ข้อมูลเดือน {MONTH_NAMES[now.getMonth() + 1]} {now.getFullYear()}
+            {lastBackupRunAt ? " (ล่าสุด " + lastBackupRunAt.toLocaleDateString("th-TH") + ")" : " (ยังไม่เคย backup เลย)"}
+          </span>
+        )}
       </div>
 
       {backupMessage && (
