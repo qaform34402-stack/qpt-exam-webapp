@@ -1068,8 +1068,197 @@ function AnnualPlannerPage() {
 }
 
 // ---- หน้ารวมของแอดมิน: สลับ "ดูคะแนน" กับ "วางแผนรายปี" ----
+// ---- แถบกราฟแท่งเรียบง่าย (ไม่พึ่งไลบรารีภายนอก) ----
+function BarRow({ label, value, maxValue, displayValue, color }) {
+  const pct = maxValue > 0 ? Math.min(100, (value / maxValue) * 100) : 0;
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 3 }}>
+        <span style={{ color: "#344054" }}>{label}</span>
+        <span style={{ color: "#667085" }}>{displayValue}</span>
+      </div>
+      <div style={{ background: "#eaecf0", borderRadius: 6, height: 14, overflow: "hidden" }}>
+        <div
+          style={{
+            width: pct + "%",
+            background: color || "#2563eb",
+            height: "100%",
+            borderRadius: 6,
+            transition: "width 0.3s",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ---- หน้า Dashboard ภาพรวม (แอดมิน) ----
+function DashboardPage() {
+  const [year, setYear] = useState(2026);
+  const [completionRows, setCompletionRows] = useState([]);
+  const [attendanceRows, setAttendanceRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadAll();
+  }, [year]);
+
+  const loadAll = async () => {
+    setLoading(true);
+    const [compRes, attRes] = await Promise.all([
+      supabaseClient
+        .from("v_course_completion")
+        .select("course_id, course_name, month, employee_id, total_exams, passed_exams, completed")
+        .eq("year", year),
+      supabaseClient
+        .from("session_attendance")
+        .select("status, training_sessions(training_calendar(year, month))"),
+    ]);
+    setCompletionRows(compRes.data || []);
+
+    const attThisYear = (attRes.data || []).filter(
+      (r) => r.training_sessions && r.training_sessions.training_calendar && r.training_sessions.training_calendar.year === year
+    );
+    setAttendanceRows(attThisYear);
+    setLoading(false);
+  };
+
+  if (loading) return <div className="page">กำลังโหลด...</div>;
+
+  // เอาเฉพาะแถวที่มีข้อสอบจริง (total_exams > 0) กันไม่ให้คอร์สที่ยังไม่มีข้อสอบ
+  // ถูกนับเป็น "ไม่ผ่าน" ปนไปกับคนที่สอบจริงแล้วไม่ผ่าน
+  const gradableRows = completionRows.filter((r) => r.total_exams > 0);
+
+  // ---- สรุปภาพรวม ----
+  const totalAttempts = gradableRows.length;
+  const totalCompleted = gradableRows.filter((r) => r.completed).length;
+  const overallRate = totalAttempts > 0 ? (totalCompleted / totalAttempts) * 100 : 0;
+  const uniqueCourses = new Set(completionRows.map((r) => r.course_id)).size;
+  const uniqueEmployees = new Set(completionRows.map((r) => r.employee_id)).size;
+
+  // ---- อัตราผ่านรายเดือน ----
+  const monthlyStats = {};
+  for (let m = 1; m <= 12; m++) monthlyStats[m] = { total: 0, completed: 0 };
+  gradableRows.forEach((r) => {
+    monthlyStats[r.month].total += 1;
+    if (r.completed) monthlyStats[r.month].completed += 1;
+  });
+
+  // ---- อัตราผ่านรายคอร์ส ----
+  const courseStats = {};
+  gradableRows.forEach((r) => {
+    if (!courseStats[r.course_name]) courseStats[r.course_name] = { total: 0, completed: 0 };
+    courseStats[r.course_name].total += 1;
+    if (r.completed) courseStats[r.course_name].completed += 1;
+  });
+  const courseStatsList = Object.entries(courseStats)
+    .map(([name, s]) => ({ name, rate: s.total > 0 ? (s.completed / s.total) * 100 : 0, total: s.total }))
+    .sort((a, b) => b.rate - a.rate);
+
+  // ---- อัตราการเข้าอบรมรายเดือน ----
+  const attendanceMonthly = {};
+  for (let m = 1; m <= 12; m++) attendanceMonthly[m] = { total: 0, present: 0 };
+  attendanceRows.forEach((r) => {
+    const m = r.training_sessions.training_calendar.month;
+    attendanceMonthly[m].total += 1;
+    if (r.status === "present") attendanceMonthly[m].present += 1;
+  });
+  const totalAttendanceRecords = attendanceRows.length;
+  const totalPresent = attendanceRows.filter((r) => r.status === "present").length;
+  const overallAttendanceRate = totalAttendanceRecords > 0 ? (totalPresent / totalAttendanceRecords) * 100 : 0;
+
+  return (
+    <div className="page">
+      <div className="header-row">
+        <h2>Dashboard ภาพรวมปี {year}</h2>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
+          <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
+          <button className="refresh-btn" onClick={loadAll}>🔄 รีเฟรช</button>
+        </div>
+      </div>
+
+      {/* สรุปภาพรวม */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "16px 0" }}>
+        {[
+          { label: "หลักสูตรที่มีข้อสอบ", value: uniqueCourses, suffix: "" },
+          { label: "พนักงานที่ถูกติดตาม", value: uniqueEmployees, suffix: " คน" },
+          { label: "อัตราผ่านรวมทั้งปี", value: overallRate.toFixed(1), suffix: "%" },
+          { label: "อัตราเข้าอบรมรวม", value: overallAttendanceRate.toFixed(1), suffix: "%" },
+        ].map((s, i) => (
+          <div key={i} className="course-card" style={{ cursor: "default", flex: "1 1 160px", textAlign: "center" }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "#2563eb" }}>{s.value}{s.suffix}</div>
+            <div style={{ fontSize: 13, color: "#667085", marginTop: 4 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* อัตราผ่านรายเดือน */}
+      <h3 style={{ marginTop: 24 }}>อัตราสอบผ่านรายเดือน (ทั้งบริษัท)</h3>
+      {totalAttempts === 0 ? (
+        <p style={{ color: "#667085" }}>ยังไม่มีข้อมูลข้อสอบในปีนี้</p>
+      ) : (
+        MONTH_NAMES.slice(1).map((name, i) => {
+          const m = i + 1;
+          const s = monthlyStats[m];
+          const rate = s.total > 0 ? (s.completed / s.total) * 100 : 0;
+          return (
+            <BarRow
+              key={m}
+              label={name}
+              value={rate}
+              maxValue={100}
+              displayValue={s.total > 0 ? rate.toFixed(0) + "% (" + s.completed + "/" + s.total + ")" : "ไม่มีข้อมูล"}
+              color="#2563eb"
+            />
+          );
+        })
+      )}
+
+      {/* อัตราผ่านรายคอร์ส */}
+      <h3 style={{ marginTop: 28 }}>อัตราสอบผ่านรายหลักสูตร</h3>
+      {courseStatsList.length === 0 ? (
+        <p style={{ color: "#667085" }}>ยังไม่มีข้อมูล</p>
+      ) : (
+        courseStatsList.map((c) => (
+          <BarRow
+            key={c.name}
+            label={c.name}
+            value={c.rate}
+            maxValue={100}
+            displayValue={c.rate.toFixed(0) + "% (n=" + c.total + ")"}
+            color={c.rate >= 80 ? "#067647" : c.rate >= 50 ? "#f79009" : "#b42318"}
+          />
+        ))
+      )}
+
+      {/* อัตราการเข้าอบรมรายเดือน */}
+      <h3 style={{ marginTop: 28 }}>อัตราการเข้าอบรมรายเดือน</h3>
+      {totalAttendanceRecords === 0 ? (
+        <p style={{ color: "#667085" }}>ยังไม่มีข้อมูลการมาร์คเข้าอบรมในปีนี้</p>
+      ) : (
+        MONTH_NAMES.slice(1).map((name, i) => {
+          const m = i + 1;
+          const s = attendanceMonthly[m];
+          const rate = s.total > 0 ? (s.present / s.total) * 100 : 0;
+          return (
+            <BarRow
+              key={m}
+              label={name}
+              value={rate}
+              maxValue={100}
+              displayValue={s.total > 0 ? rate.toFixed(0) + "% (" + s.present + "/" + s.total + ")" : "ไม่มีข้อมูล"}
+              color="#7c3aed"
+            />
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 function AdminHubPage() {
-  const [tab, setTab] = useState("scores"); // scores | planner
+  const [tab, setTab] = useState("scores"); // scores | planner | dashboard
   return (
     <div>
       <div className="page" style={{ paddingBottom: 0 }}>
@@ -1080,10 +1269,14 @@ function AdminHubPage() {
           <div className={"month-tab" + (tab === "planner" ? " active" : "")} onClick={() => setTab("planner")}>
             วางแผนรายปี
           </div>
+          <div className={"month-tab" + (tab === "dashboard" ? " active" : "")} onClick={() => setTab("dashboard")}>
+            Dashboard
+          </div>
         </div>
       </div>
       {tab === "scores" && <AdminCalendarPage />}
       {tab === "planner" && <AnnualPlannerPage />}
+      {tab === "dashboard" && <DashboardPage />}
     </div>
   );
 }
