@@ -488,6 +488,8 @@ function AnnualPlannerPage() {
   const [detailError, setDetailError] = useState("");
   const [newMaterialTitle, setNewMaterialTitle] = useState("");
   const [newMaterialUrl, setNewMaterialUrl] = useState("");
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [editingMaterialId, setEditingMaterialId] = useState(null);
   const [editingMaterialTitle, setEditingMaterialTitle] = useState("");
   const [editingMaterialUrl, setEditingMaterialUrl] = useState("");
@@ -639,6 +641,59 @@ function AnnualPlannerPage() {
     loadAll();
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    e.target.value = ""; // เผื่อเลือกไฟล์เดิมซ้ำอีกครั้งในอนาคต ให้ onChange ทำงานอีกได้
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      setUploadError("รองรับเฉพาะไฟล์ PDF เท่านั้น");
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setUploadError("ไฟล์ใหญ่เกินไป (จำกัด 15 MB)");
+      return;
+    }
+
+    setUploadError("");
+    setUploadingFile(true);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        // reader.result เป็น "data:application/pdf;base64,xxxxx" ตัดเอาแค่ส่วน base64 จริง
+        const base64Data = reader.result.split(",")[1];
+        const res = await fetch(BACKUP_WEB_APP_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            secret: BACKUP_SECRET,
+            filename: file.name,
+            mimeType: file.type,
+            base64Data: base64Data,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setNewMaterialUrl(data.url);
+          if (!newMaterialTitle.trim()) {
+            setNewMaterialTitle(file.name.replace(/\.pdf$/i, ""));
+          }
+        } else {
+          setUploadError("อัปโหลดไม่สำเร็จ: " + (data.error || "ไม่ทราบสาเหตุ"));
+        }
+      } catch (err) {
+        setUploadError("อัปโหลดไม่สำเร็จ: " + err.message);
+      } finally {
+        setUploadingFile(false);
+      }
+    };
+    reader.onerror = () => {
+      setUploadError("อ่านไฟล์ไม่สำเร็จ");
+      setUploadingFile(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const startEditMaterial = (m) => {
     setEditingMaterialId(m.id);
     setEditingMaterialTitle(m.title || "");
@@ -770,7 +825,34 @@ function AnnualPlannerPage() {
               </div>
             ))}
 
-            <div className="new-session-row" style={{ marginTop: 12 }}>
+            {uploadError && <p className="error">{uploadError}</p>}
+
+            <div style={{ marginTop: 12 }}>
+              <label
+                className="secondary"
+                style={{
+                  display: "inline-block",
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  cursor: uploadingFile ? "default" : "pointer",
+                  opacity: uploadingFile ? 0.6 : 1,
+                }}
+              >
+                {uploadingFile ? "⏳ กำลังอัปโหลด..." : "📎 อัปโหลดไฟล์ PDF"}
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleFileUpload}
+                  disabled={uploadingFile}
+                  style={{ display: "none" }}
+                />
+              </label>
+              <span style={{ marginLeft: 10, fontSize: 13, color: "#667085" }}>
+                หรือวางลิงก์ Google Drive เองด้านล่าง
+              </span>
+            </div>
+
+            <div className="new-session-row" style={{ marginTop: 8 }}>
               <input
                 type="text"
                 placeholder="ชื่อเอกสารใหม่"
@@ -780,7 +862,7 @@ function AnnualPlannerPage() {
               />
               <input
                 type="text"
-                placeholder="ลิงก์ Google Drive"
+                placeholder="ลิงก์ Google Drive (เติมอัตโนมัติถ้าอัปโหลดไฟล์ด้านบน)"
                 value={newMaterialUrl}
                 onChange={(e) => setNewMaterialUrl(e.target.value)}
                 style={{ flex: 2, minWidth: 200 }}
