@@ -16,8 +16,8 @@
 <style>
   * { box-sizing: border-box; }
   :root {
-    --cream: #FAF3E7;
-    --surface: #FFFDF8;
+    --cream: #FFFFFF;
+    --surface: #FFFFFF;
     --ink: #3B3A36;
     --ink-soft: #8C8878;
     --line: #EFE7D6;
@@ -60,6 +60,8 @@
     padding: 14px;
     margin: 0 auto 14px;
     max-width: 760px;
+    border: 1px solid var(--line);
+    box-shadow: 0 2px 8px rgba(59,58,54,0.05);
   }
   .nav-section + .nav-section { margin-top: -4px; }
   .menu-wrap { position: relative; display: inline-block; flex-shrink: 0; }
@@ -117,6 +119,7 @@
     padding: 32px 28px;
     border-radius: 20px;
     border: 1px solid var(--line);
+    box-shadow: 0 4px 16px rgba(59,58,54,0.06);
   }
   .page {
     max-width: 760px;
