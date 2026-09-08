@@ -167,6 +167,10 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 const MONTH_NAMES = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
+// ---- สำหรับปุ่ม Export/Backup (Admin) - เชื่อมกับ Apps Script Web App ----
+const BACKUP_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv56G8CcFNV_nQyO6toXCgV_s1wW2oDRZChNtvkeud0hbFdz15q8A_YqIxm2mfNj5X/exec";
+const BACKUP_SECRET = "5508ede4b28fb4f69e54cebf2bf52135c1c1dc88f8a35eeb";
+
 // ---- หน้า Login ----
 function LoginPage({ onLogin }) {
   const [code, setCode] = useState("");
@@ -220,10 +224,37 @@ function AdminCalendarPage() {
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [completionRows, setCompletionRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [backupStatus, setBackupStatus] = useState(""); // "", "loading", "success", "error"
+  const [backupMessage, setBackupMessage] = useState("");
+  const [backupUrl, setBackupUrl] = useState("");
 
   useEffect(() => {
     loadAll();
   }, []);
+
+  const handleBackup = async () => {
+    setBackupStatus("loading");
+    setBackupMessage("กำลัง backup... (อาจใช้เวลา 5-10 วินาที)");
+    setBackupUrl("");
+    try {
+      const res = await fetch(BACKUP_WEB_APP_URL + "?secret=" + encodeURIComponent(BACKUP_SECRET));
+      const data = await res.json();
+      if (data.success) {
+        setBackupStatus("success");
+        const counts = Object.entries(data.rowsAdded || {})
+          .map(([table, count]) => table + ": " + count)
+          .join(", ");
+        setBackupMessage("บันทึกสำเร็จ (" + counts + ")");
+        setBackupUrl(data.spreadsheetUrl || "");
+      } else {
+        setBackupStatus("error");
+        setBackupMessage("บันทึกไม่สำเร็จ: " + (data.error || "ไม่ทราบสาเหตุ"));
+      }
+    } catch (err) {
+      setBackupStatus("error");
+      setBackupMessage("เชื่อมต่อไม่สำเร็จ: " + err.message);
+    }
+  };
 
   const loadAll = async () => {
     setLoading(true);
@@ -333,8 +364,36 @@ function AdminCalendarPage() {
     <div className="page">
       <div className="header-row">
         <h2>ปฏิทินอบรม ปี {year}</h2>
-        <button className="refresh-btn" onClick={loadAll}>🔄 รีเฟรช</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="refresh-btn"
+            onClick={handleBackup}
+            disabled={backupStatus === "loading"}
+          >
+            {backupStatus === "loading" ? "⏳ กำลัง Backup..." : "📦 Export/Backup"}
+          </button>
+          <button className="refresh-btn" onClick={loadAll}>🔄 รีเฟรช</button>
+        </div>
       </div>
+
+      {backupMessage && (
+        <p style={{
+          color: backupStatus === "error" ? "#b42318" : "#067647",
+          fontSize: 14,
+          marginTop: -8,
+        }}>
+          {backupMessage}
+          {backupUrl && (
+            <>
+              {" "}
+              <a href={backupUrl} target="_blank" rel="noopener noreferrer">
+                เปิดไฟล์ Backup
+              </a>
+            </>
+          )}
+        </p>
+      )}
+
       <div className="month-tabs">
         {months.map((m) => (
           <div
