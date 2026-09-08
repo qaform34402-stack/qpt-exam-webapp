@@ -13,7 +13,6 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-<style>
   * { box-sizing: border-box; }
   :root {
     --cream: #FFFFFF;
@@ -21,37 +20,56 @@
     --ink: #3B3A36;
     --ink-soft: #8C8878;
     --line: #EFE7D6;
-    --accent: #1B6B4A;
-    --accent-dark: #145038;
-    --accent-bg: #E4F5EC;
+    /* สีหลักของแบรนด์ (ปุ่ม, เมนูที่เลือกอยู่) - กุหลาบ/แดงอมชมพูสด ไม่ใช่เขียว/ม่วง/น้ำเงิน/ฟ้า */
+    --accent: #C81E5C;
+    --accent-dark: #8F1345;
+    --accent-bg: #FCE4ED;
+    /* สีความหมาย "ผ่าน/สำเร็จ" แยกจากสีแบรนด์ ยังคงเป็นเขียวเพราะเป็นมาตรฐานสากล */
+    --success: #1B6B4A;
+    --success-dark: #145038;
+    --success-bg: #E4F5EC;
     --warn: #B8590C;
     --warn-bg: #FFF0E0;
     --danger: #C1401F;
     --danger-bg: #FDEDE7;
   }
-  /* กลุ่มสี tile สำหรับเมนูหลัก แต่ละอันมีสีเฉพาะตัวให้แยกแยะง่าย */
+  /* กลุ่มสี tile สำหรับเมนูหลัก แต่ละอันมีสีเฉพาะตัวให้แยกแยะง่าย
+     (ชื่อคลาสเป็นชื่อเดิมตั้งแต่เวอร์ชันก่อน แต่ปรับค่าสีจริงให้เลี่ยงเขียว/ม่วง/น้ำเงิน/ฟ้าแล้ว) */
   .tile {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    border-radius: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 22px 20px;
+    border-radius: 16px;
     cursor: pointer;
     border: 2px solid transparent;
-    flex: 1 1 150px;
+    min-height: 130px;
+    justify-content: space-between;
   }
-  .tile .tile-icon { font-size: 20px; flex-shrink: 0; }
-  .tile .tile-label { font-weight: 600; font-size: 14.5px; font-family: "Prompt", sans-serif; }
-  .tile.tile-green { background: #E4F5EC; color: #145038; }
-  .tile.tile-blue { background: #E3EEFC; color: #1E4E8C; }
+  .tile-top { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+  .tile .tile-icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    background: rgba(255,255,255,0.6);
+  }
+  .tile .tile-label { font-weight: 700; font-size: 16px; font-family: "Prompt", sans-serif; }
+  .tile .tile-desc { font-size: 13px; opacity: 0.85; line-height: 1.4; }
+  .tile.tile-green { background: #FCE4ED; color: #8F1345; }
+  .tile.tile-blue { background: #FFF3D6; color: #8F6100; }
   .tile.tile-orange { background: #FDECDD; color: #9A4A0E; }
-  .tile.tile-purple { background: #EFE7FB; color: #5B3A9E; }
-  .tile.tile-teal { background: #DFF5F1; color: #0F6B5F; }
+  .tile.tile-purple { background: #F3E7DB; color: #5E3F26; }
+  .tile.tile-teal { background: #FDE7DF; color: #A83D1D; }
   .tile.active { border-color: currentColor; }
   .tile-row {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
     margin-bottom: 4px;
   }
   .nav-section {
@@ -59,7 +77,7 @@
     border-radius: 16px;
     padding: 14px;
     margin: 0 auto 14px;
-    max-width: 760px;
+    max-width: 960px;
     border: 1px solid var(--line);
     box-shadow: 0 2px 8px rgba(59,58,54,0.05);
   }
@@ -121,8 +139,12 @@
     border: 1px solid var(--line);
     box-shadow: 0 4px 16px rgba(59,58,54,0.06);
   }
+  .container input {
+    box-sizing: border-box;
+    width: 100%;
+  }
   .page {
-    max-width: 760px;
+    max-width: 960px;
     margin: 24px auto;
     padding: 0 16px 40px;
   }
@@ -207,13 +229,13 @@
     margin-right: 6px;
     font-weight: 500;
   }
-  .badge.ok { background: var(--accent-bg); color: var(--accent-dark); }
+  .badge.ok { background: var(--success-bg); color: var(--success-dark); }
   .badge.warn { background: var(--warn-bg); color: var(--warn); }
   .badge.fail { background: var(--danger-bg); color: var(--danger); }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
   th { color: var(--ink-soft); font-weight: 500; }
-  .pass { color: var(--accent-dark); font-weight: 600; }
+  .pass { color: var(--success-dark); font-weight: 600; }
   .fail { color: var(--danger); font-weight: 600; }
   .attendance-row {
     display: flex;
@@ -230,7 +252,7 @@
     padding: 10px 8px;
     flex-shrink: 0;
   }
-  .status-btn.present { background: var(--accent); }
+  .status-btn.present { background: var(--success); }
   .status-btn.absent { background: var(--danger); }
   .note-input {
     width: 140px;
@@ -705,15 +727,21 @@ function AdminCalendarPage() {
           const examCount = examsByCourse[entry.course_id] || 0;
           return (
             <div className="course-card" key={entry.id} onClick={() => openEntry(entry)}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+              <div className="icon-circle ok">
+                <i className="ti ti-book-2" aria-hidden="true"></i>
               </div>
-              <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>
-                เอกสาร {matCount}
-              </span>
-              <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>
-                ข้อสอบ {examCount}
-              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                  {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+                </div>
+                <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>
+                  เอกสาร {matCount}
+                </span>
+                <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>
+                  ข้อสอบ {examCount}
+                </span>
+              </div>
+              <i className="ti ti-chevron-right" style={{ color: "var(--ink-soft)", fontSize: 18, flexShrink: 0 }} aria-hidden="true"></i>
             </div>
           );
         })
@@ -734,6 +762,8 @@ function AnnualPlannerPage() {
   const [filterMode, setFilterMode] = useState("all"); // all | unplanned | no_materials | no_exam
   const [showAddForm, setShowAddForm] = useState(false);
   const [newCourseId, setNewCourseId] = useState("");
+  const [isNewCourse, setIsNewCourse] = useState(false);
+  const [newCourseName, setNewCourseName] = useState("");
   const [newMonth, setNewMonth] = useState(1);
   const [editingId, setEditingId] = useState(null);
   const [editingMonth, setEditingMonth] = useState(1);
@@ -805,20 +835,45 @@ function AnnualPlannerPage() {
     !searchQuery.trim() || (name || "").toLowerCase().includes(searchQuery.trim().toLowerCase());
 
   const handleAddPlan = async () => {
-    if (!newCourseId || !newMonth) {
-      setSaveError("กรุณาเลือกหลักสูตรและเดือน");
+    if (!newMonth) {
+      setSaveError("กรุณาเลือกเดือน");
       return;
     }
     setSaveError("");
+
+    let courseIdToUse = newCourseId;
+
+    if (isNewCourse) {
+      if (!newCourseName.trim()) {
+        setSaveError("กรุณากรอกชื่อหลักสูตรใหม่");
+        return;
+      }
+      const { data: newCourse, error: courseError } = await supabaseClient
+        .from("courses")
+        .insert({ name: newCourseName.trim() })
+        .select()
+        .single();
+      if (courseError) {
+        setSaveError("สร้างหลักสูตรใหม่ไม่สำเร็จ: " + courseError.message);
+        return;
+      }
+      courseIdToUse = newCourse.id;
+    } else if (!newCourseId) {
+      setSaveError("กรุณาเลือกหลักสูตร");
+      return;
+    }
+
     const { error } = await supabaseClient
       .from("training_calendar")
-      .insert({ course_id: newCourseId, year, month: newMonth });
+      .insert({ course_id: courseIdToUse, year, month: newMonth });
     if (error) {
       setSaveError("เพิ่มแผนไม่สำเร็จ: " + error.message);
       return;
     }
     setShowAddForm(false);
     setNewCourseId("");
+    setIsNewCourse(false);
+    setNewCourseName("");
     setNewMonth(1);
     loadAll();
   };
@@ -1202,21 +1257,61 @@ function AnnualPlannerPage() {
       </div>
 
       {showAddForm && (
-        <div className="course-card" style={{ cursor: "default" }}>
+        <div className="course-card" style={{ cursor: "default", display: "block" }}>
+          <div style={{ display: "flex", gap: 16, marginBottom: 10 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, cursor: "pointer" }}>
+              <input
+                type="radio"
+                checked={!isNewCourse}
+                onChange={() => setIsNewCourse(false)}
+                style={{ width: "auto", margin: 0 }}
+              />
+              เลือกหลักสูตรเดิม
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, cursor: "pointer" }}>
+              <input
+                type="radio"
+                checked={isNewCourse}
+                onChange={() => setIsNewCourse(true)}
+                style={{ width: "auto", margin: 0 }}
+              />
+              สร้างหลักสูตรใหม่
+            </label>
+          </div>
           <div className="new-session-row">
-            <select value={newCourseId} onChange={(e) => setNewCourseId(e.target.value)}>
-              <option value="" disabled>เลือกหลักสูตร</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            {isNewCourse ? (
+              <input
+                type="text"
+                placeholder="ชื่อหลักสูตรใหม่ เช่น QWS-QPT-01-025 การตรวจสอบ..."
+                value={newCourseName}
+                onChange={(e) => setNewCourseName(e.target.value)}
+                style={{ flex: 1, minWidth: 220 }}
+              />
+            ) : (
+              <select value={newCourseId} onChange={(e) => setNewCourseId(e.target.value)}>
+                <option value="" disabled>เลือกหลักสูตร</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            )}
             <select value={newMonth} onChange={(e) => setNewMonth(parseInt(e.target.value, 10))}>
               {MONTH_NAMES.slice(1).map((name, i) => (
                 <option key={i + 1} value={i + 1}>{name}</option>
               ))}
             </select>
             <button onClick={handleAddPlan}>บันทึก</button>
-            <button className="secondary" onClick={() => setShowAddForm(false)}>ยกเลิก</button>
+            <button
+              className="secondary"
+              onClick={() => {
+                setShowAddForm(false);
+                setIsNewCourse(false);
+                setNewCourseName("");
+                setNewCourseId("");
+              }}
+            >
+              ยกเลิก
+            </button>
           </div>
         </div>
       )}
@@ -1326,21 +1421,20 @@ function AnnualPlannerPage() {
   );
 }
 
-// ---- หน้ารวมของแอดมิน: สลับ "ดูคะแนน" กับ "วางแผนรายปี" ----
 // ---- แถบกราฟแท่งเรียบง่าย (ไม่พึ่งไลบรารีภายนอก) ----
 function BarRow({ label, value, maxValue, displayValue, color }) {
   const pct = maxValue > 0 ? Math.min(100, (value / maxValue) * 100) : 0;
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 3 }}>
-        <span style={{ color: "#344054" }}>{label}</span>
-        <span style={{ color: "#667085" }}>{displayValue}</span>
+        <span style={{ color: "var(--ink)" }}>{label}</span>
+        <span style={{ color: "var(--ink-soft)" }}>{displayValue}</span>
       </div>
-      <div style={{ background: "#eaecf0", borderRadius: 6, height: 14, overflow: "hidden" }}>
+      <div style={{ background: "var(--line)", borderRadius: 6, height: 14, overflow: "hidden" }}>
         <div
           style={{
             width: pct + "%",
-            background: color || "#2563eb",
+            background: color || "var(--accent)",
             height: "100%",
             borderRadius: 6,
             transition: "width 0.3s",
@@ -1348,6 +1442,48 @@ function BarRow({ label, value, maxValue, displayValue, color }) {
         />
       </div>
     </div>
+  );
+}
+
+// ---- กราฟแท่งแนวตั้ง 12 เดือน อ่านง่ายกว่าแบบแถบนอน ----
+function MonthlyBarChart({ data, color }) {
+  const width = 720;
+  const height = 200;
+  const padding = { top: 26, bottom: 26, left: 6, right: 6 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+  const barSlot = chartW / data.length;
+  const barWidth = barSlot * 0.55;
+
+  return (
+    <svg viewBox={"0 0 " + width + " " + height} style={{ width: "100%", height: "auto", display: "block" }}>
+      <line
+        x1={padding.left}
+        y1={height - padding.bottom}
+        x2={width - padding.right}
+        y2={height - padding.bottom}
+        stroke="var(--line)"
+        strokeWidth="1"
+      />
+      {data.map((d, i) => {
+        const x = padding.left + i * barSlot + (barSlot - barWidth) / 2;
+        const barH = Math.max(3, (d.value / 100) * chartH);
+        const y = height - padding.bottom - barH;
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={barWidth} height={barH} rx={4} fill={d.hasData ? color : "var(--line)"} />
+            {d.hasData && (
+              <text x={x + barWidth / 2} y={y - 7} textAnchor="middle" fontSize="11" fill="var(--ink-soft)">
+                {Math.round(d.value)}%
+              </text>
+            )}
+            <text x={x + barWidth / 2} y={height - padding.bottom + 17} textAnchor="middle" fontSize="11" fill="var(--ink-soft)">
+              {d.label}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -1446,8 +1582,8 @@ function DashboardPage() {
           { label: "อัตราเข้าอบรมรวม", value: overallAttendanceRate.toFixed(1), suffix: "%" },
         ].map((s, i) => (
           <div key={i} className="course-card" style={{ cursor: "default", flex: "1 1 160px", textAlign: "center" }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "#2563eb" }}>{s.value}{s.suffix}</div>
-            <div style={{ fontSize: 13, color: "#667085", marginTop: 4 }}>{s.label}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "var(--accent)" }}>{s.value}{s.suffix}</div>
+            <div style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 4 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -1455,29 +1591,23 @@ function DashboardPage() {
       {/* อัตราผ่านรายเดือน */}
       <h3 style={{ marginTop: 24 }}>อัตราสอบผ่านรายเดือน (ทั้งบริษัท)</h3>
       {totalAttempts === 0 ? (
-        <p style={{ color: "#667085" }}>ยังไม่มีข้อมูลข้อสอบในปีนี้</p>
+        <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีข้อมูลข้อสอบในปีนี้</p>
       ) : (
-        MONTH_NAMES.slice(1).map((name, i) => {
-          const m = i + 1;
-          const s = monthlyStats[m];
-          const rate = s.total > 0 ? (s.completed / s.total) * 100 : 0;
-          return (
-            <BarRow
-              key={m}
-              label={name}
-              value={rate}
-              maxValue={100}
-              displayValue={s.total > 0 ? rate.toFixed(0) + "% (" + s.completed + "/" + s.total + ")" : "ไม่มีข้อมูล"}
-              color="#2563eb"
-            />
-          );
-        })
+        <MonthlyBarChart
+          color="var(--success)"
+          data={MONTH_NAMES.slice(1).map((name, i) => {
+            const m = i + 1;
+            const s = monthlyStats[m];
+            const rate = s.total > 0 ? (s.completed / s.total) * 100 : 0;
+            return { label: name, value: rate, hasData: s.total > 0 };
+          })}
+        />
       )}
 
       {/* อัตราผ่านรายคอร์ส */}
       <h3 style={{ marginTop: 28 }}>อัตราสอบผ่านรายหลักสูตร</h3>
       {courseStatsList.length === 0 ? (
-        <p style={{ color: "#667085" }}>ยังไม่มีข้อมูล</p>
+        <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีข้อมูล</p>
       ) : (
         courseStatsList.map((c) => (
           <BarRow
@@ -1486,7 +1616,7 @@ function DashboardPage() {
             value={c.rate}
             maxValue={100}
             displayValue={c.rate.toFixed(0) + "% (n=" + c.total + ")"}
-            color={c.rate >= 80 ? "#067647" : c.rate >= 50 ? "#f79009" : "#b42318"}
+            color={c.rate >= 80 ? "var(--success)" : c.rate >= 50 ? "var(--warn)" : "var(--danger)"}
           />
         ))
       )}
@@ -1494,23 +1624,17 @@ function DashboardPage() {
       {/* อัตราการเข้าอบรมรายเดือน */}
       <h3 style={{ marginTop: 28 }}>อัตราการเข้าอบรมรายเดือน</h3>
       {totalAttendanceRecords === 0 ? (
-        <p style={{ color: "#667085" }}>ยังไม่มีข้อมูลการมาร์คเข้าอบรมในปีนี้</p>
+        <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีข้อมูลการมาร์คเข้าอบรมในปีนี้</p>
       ) : (
-        MONTH_NAMES.slice(1).map((name, i) => {
-          const m = i + 1;
-          const s = attendanceMonthly[m];
-          const rate = s.total > 0 ? (s.present / s.total) * 100 : 0;
-          return (
-            <BarRow
-              key={m}
-              label={name}
-              value={rate}
-              maxValue={100}
-              displayValue={s.total > 0 ? rate.toFixed(0) + "% (" + s.present + "/" + s.total + ")" : "ไม่มีข้อมูล"}
-              color="#7c3aed"
-            />
-          );
-        })
+        <MonthlyBarChart
+          color="var(--accent)"
+          data={MONTH_NAMES.slice(1).map((name, i) => {
+            const m = i + 1;
+            const s = attendanceMonthly[m];
+            const rate = s.total > 0 ? (s.present / s.total) * 100 : 0;
+            return { label: name, value: rate, hasData: s.total > 0 };
+          })}
+        />
       )}
     </div>
   );
@@ -1828,8 +1952,14 @@ function ForemanPage({ session }) {
         )}
         {sessions.map((s) => (
           <div className="course-card" key={s.id} onClick={() => openSession(s)}>
-            <div style={{ fontWeight: 600 }}>{s.session_date}</div>
-            <span className="badge ok">กะ {s.shift || "-"}</span>
+            <div className="icon-circle ok">
+              <i className="ti ti-calendar-event" aria-hidden="true"></i>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>{s.session_date}</div>
+              <span className="badge ok">กะ {s.shift || "-"}</span>
+            </div>
+            <i className="ti ti-chevron-right" style={{ color: "var(--ink-soft)", fontSize: 18, flexShrink: 0 }} aria-hidden="true"></i>
           </div>
         ))}
 
@@ -1878,9 +2008,13 @@ function ForemanPage({ session }) {
       ) : (
         rowsThisMonth.map((entry) => (
           <div className="course-card" key={entry.id} onClick={() => openEntry(entry)}>
-            <div style={{ fontWeight: 600 }}>
+            <div className="icon-circle ok">
+              <i className="ti ti-book-2" aria-hidden="true"></i>
+            </div>
+            <div style={{ flex: 1, fontWeight: 600 }}>
               {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
             </div>
+            <i className="ti ti-chevron-right" style={{ color: "var(--ink-soft)", fontSize: 18, flexShrink: 0 }} aria-hidden="true"></i>
           </div>
         ))
       )}
@@ -2105,12 +2239,18 @@ function EmployeePage({ session }) {
           const completed = comp ? comp.completed : false;
           return (
             <div className="course-card" key={entry.id} onClick={() => openEntry(entry)}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+              <div className={"icon-circle " + (completed ? "ok" : "warn")}>
+                <i className={"ti " + (completed ? "ti-check" : "ti-book-2")} aria-hidden="true"></i>
               </div>
-              <span className={"badge " + (completed ? "ok" : "warn")}>
-                {passedCount} / {total} ผ่านแล้ว
-              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                  {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+                </div>
+                <span className={"badge " + (completed ? "ok" : "warn")}>
+                  {passedCount} / {total} ผ่านแล้ว
+                </span>
+              </div>
+              <i className="ti ti-chevron-right" style={{ color: "var(--ink-soft)", fontSize: 18, flexShrink: 0 }} aria-hidden="true"></i>
             </div>
           );
         })
@@ -2126,6 +2266,12 @@ function HomePage({ role, navItems, onNavigate }) {
   const hour = now.getHours();
   const greeting = hour < 12 ? "สวัสดีตอนเช้า" : hour < 18 ? "สวัสดีตอนบ่าย" : "สวัสดีตอนเย็น";
   const shortcuts = navItems.filter((item) => item.key !== "home");
+  const quotes = [
+    "การเรียนรู้วันนี้ คือความปลอดภัยของวันพรุ่งนี้",
+    "ทุกข้อสอบที่ผ่าน คือมาตรฐานที่สูงขึ้นของทีมเรา",
+    "ความใส่ใจเล็กๆ วันนี้ ป้องกันปัญหาใหญ่ในวันหน้า",
+  ];
+  const quote = quotes[now.getDate() % quotes.length];
 
   return (
     <div className="page">
@@ -2142,10 +2288,29 @@ function HomePage({ role, navItems, onNavigate }) {
             className={"tile tile-" + item.color}
             onClick={() => onNavigate(item.key)}
           >
-            <i className={"ti " + item.icon + " tile-icon"} aria-hidden="true"></i>
-            <span className="tile-label">{item.label}</span>
+            <div className="tile-top">
+              <div className="tile-icon-circle">
+                <i className={"ti " + item.icon} aria-hidden="true"></i>
+              </div>
+              <i className="ti ti-arrow-up-right" aria-hidden="true"></i>
+            </div>
+            <div>
+              <div className="tile-label">{item.label}</div>
+              {item.desc && <div className="tile-desc">{item.desc}</div>}
+            </div>
           </div>
         ))}
+      </div>
+      <div
+        className="nav-section"
+        style={{ padding: 20, marginTop: 14, background: "var(--accent-bg)", border: "none" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <i className="ti ti-quote" style={{ fontSize: 26, color: "var(--accent-dark)", flexShrink: 0 }} aria-hidden="true"></i>
+          <p style={{ margin: 0, color: "var(--accent-dark)", fontWeight: 600, fontSize: 14.5 }}>
+            {quote}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -2160,19 +2325,19 @@ function Dashboard({ session, role, onLogout }) {
   const navItemsByRole = {
     admin: [
       { key: "home", label: "หน้าหลัก", icon: "ti-home", color: "green" },
-      { key: "scores", label: "ดูคะแนน", icon: "ti-chart-bar", color: "orange" },
-      { key: "planner", label: "วางแผนรายปี", icon: "ti-calendar-event", color: "purple" },
-      { key: "dashboard", label: "Dashboard", icon: "ti-layout-dashboard", color: "teal" },
-      { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue" },
+      { key: "scores", label: "ดูคะแนน", icon: "ti-chart-bar", color: "orange", desc: "ผลสอบของพนักงานรายเดือน" },
+      { key: "planner", label: "วางแผนรายปี", icon: "ti-calendar-event", color: "purple", desc: "จัดตารางอบรมทั้งปี" },
+      { key: "dashboard", label: "Dashboard", icon: "ti-layout-dashboard", color: "teal", desc: "ภาพรวมอัตราผ่าน/เข้าอบรม" },
+      { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue", desc: "ทำแบบทดสอบของตัวเอง" },
     ],
     foreman: [
       { key: "home", label: "หน้าหลัก", icon: "ti-home", color: "green" },
-      { key: "main", label: "งานของฉัน", icon: "ti-briefcase", color: "green" },
-      { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue" },
+      { key: "main", label: "งานของฉัน", icon: "ti-briefcase", color: "green", desc: "มาร์คการเข้าอบรม" },
+      { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue", desc: "ทำแบบทดสอบของตัวเอง" },
     ],
     employee: [
       { key: "home", label: "หน้าหลัก", icon: "ti-home", color: "green" },
-      { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue" },
+      { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue", desc: "ดูคอร์สและทำแบบทดสอบ" },
     ],
   };
   const navItems = navItemsByRole[role] || navItemsByRole.employee;
