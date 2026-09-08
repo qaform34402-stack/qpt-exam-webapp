@@ -4,25 +4,45 @@
 <meta charset="UTF-8" />
 <title>ระบบข้อสอบ QPT</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+<style>
   * { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, "Segoe UI", "Sarabun", sans-serif;
-    background: #f2f4f7;
-    margin: 0;
-    color: #1d2939;
+  :root {
+    --cream: #FAF3E7;
+    --surface: #FFFDF8;
+    --ink: #3B3A36;
+    --ink-soft: #8C8878;
+    --line: #EFE7D6;
+    --accent: #2F9E77;
+    --accent-dark: #1E7A56;
+    --accent-bg: #E7F5EF;
+    --warn: #B8590C;
+    --warn-bg: #FFF0E0;
+    --danger: #C1401F;
+    --danger-bg: #FDEDE7;
   }
+  body {
+    font-family: "Noto Sans Thai", "Prompt", sans-serif;
+    background: var(--cream);
+    margin: 0;
+    color: var(--ink);
+  }
+  h2, h3 { font-family: "Prompt", "Noto Sans Thai", sans-serif; font-weight: 600; }
   .container {
     max-width: 380px;
     margin: 60px auto;
-    background: white;
-    padding: 28px;
-    border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    background: var(--surface);
+    padding: 32px 28px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
   }
   .page {
     max-width: 760px;
@@ -33,31 +53,40 @@
   input, select {
     width: 100%;
     padding: 14px;
-    font-size: 18px;
+    font-size: 16px;
     margin: 8px 0;
-    border: 1px solid #d0d5dd;
+    border: 1px solid var(--line);
     border-radius: 10px;
     font-family: inherit;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
   }
   button {
     padding: 12px 18px;
-    font-size: 16px;
-    background: #2563eb;
+    font-size: 15px;
+    font-family: "Noto Sans Thai", sans-serif;
+    font-weight: 500;
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 10px;
     cursor: pointer;
   }
-  button.secondary { background: #e4e7ec; color: #344054; }
-  button:disabled { background: #93b4f0; }
-  .error { color: #dc2626; margin-top: 10px; font-size: 14px; }
+  button.secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+  button:disabled { background: #C9E4D9; cursor: default; }
+  .error { color: var(--danger); margin-top: 10px; font-size: 14px; }
   .role-badge {
     display: inline-block;
-    padding: 4px 12px;
+    padding: 4px 14px;
     border-radius: 999px;
-    background: #eef2ff;
-    color: #4338ca;
+    background: var(--accent-bg);
+    color: var(--accent-dark);
     font-size: 14px;
+    font-weight: 500;
     margin-bottom: 16px;
   }
   .topbar {
@@ -65,8 +94,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    background: white;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
   }
   .month-tabs {
     display: flex;
@@ -77,51 +106,55 @@
   .month-tab {
     padding: 8px 16px;
     border-radius: 999px;
-    background: white;
-    border: 1px solid #d0d5dd;
+    background: var(--surface);
+    border: 1px solid var(--line);
     cursor: pointer;
-    color: #344054;
+    color: var(--ink-soft);
+    font-size: 14px;
   }
-  .month-tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+  .month-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
   .course-card {
-    background: white;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--line);
     cursor: pointer;
   }
-  .course-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .course-card:last-child { border-bottom: none; }
   .badge {
     display: inline-block;
-    font-size: 13px;
-    padding: 2px 10px;
-    border-radius: 999px;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 6px;
     margin-right: 6px;
+    font-weight: 500;
   }
-  .badge.ok { background: #ecfdf3; color: #067647; }
-  .badge.warn { background: #fef3f2; color: #b42318; }
+  .badge.ok { background: var(--accent-bg); color: var(--accent-dark); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.fail { background: var(--danger-bg); color: var(--danger); }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eaecf0; font-size: 14px; }
-  .pass { color: #067647; font-weight: 600; }
-  .fail { color: #b42318; font-weight: 600; }
+  th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  th { color: var(--ink-soft); font-weight: 500; }
+  .pass { color: var(--accent-dark); font-weight: 600; }
+  .fail { color: var(--danger); font-weight: 600; }
   .attendance-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid #eaecf0;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--line);
   }
   .attendance-row .name { font-weight: 500; }
-  .attendance-row .meta { font-size: 13px; color: #667085; }
+  .attendance-row .meta { font-size: 13px; color: var(--ink-soft); }
   .status-btn {
     width: 72px;
     text-align: center;
     padding: 10px 8px;
     flex-shrink: 0;
   }
-  .status-btn.present { background: #067647; }
-  .status-btn.absent { background: #b42318; }
+  .status-btn.present { background: var(--accent); }
+  .status-btn.absent { background: var(--danger); }
   .note-input {
     width: 140px;
     padding: 8px;
@@ -143,12 +176,26 @@
     gap: 12px;
   }
   .refresh-btn {
-    background: #e4e7ec;
-    color: #344054;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
     padding: 8px 14px;
     font-size: 14px;
     white-space: nowrap;
   }
+  .icon-circle {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .icon-circle.ok { background: var(--accent-bg); color: var(--accent-dark); }
+  .icon-circle.warn { background: var(--warn-bg); color: var(--warn); }
+  .icon-circle.fail { background: var(--danger-bg); color: var(--danger); }
 </style>
 </head>
 <body>
@@ -196,7 +243,18 @@ function LoginPage({ onLogin }) {
 
   return (
     <div className="container">
-      <h2>เข้าสู่ระบบ QPT</h2>
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div
+          className="icon-circle ok"
+          style={{ width: 56, height: 56, fontSize: 28, margin: "0 auto 14px" }}
+        >
+          <i className="ti ti-clipboard-check" aria-hidden="true"></i>
+        </div>
+        <h2 style={{ margin: 0 }}>ระบบข้อสอบ QPT</h2>
+        <p style={{ color: "var(--ink-soft)", fontSize: 14, marginTop: 6 }}>
+          กรอกรหัสพนักงานเพื่อเข้าสู่ระบบ
+        </p>
+      </div>
       <input
         type="text"
         inputMode="numeric"
@@ -205,11 +263,17 @@ function LoginPage({ onLogin }) {
         onChange={(e) => setCode(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleLogin()}
         autoFocus
+        style={{ textAlign: "center", fontSize: 18, letterSpacing: 1 }}
       />
-      <button style={{ width: "100%" }} onClick={handleLogin} disabled={loading}>
+      <button style={{ width: "100%", marginTop: 8 }} onClick={handleLogin} disabled={loading}>
         {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
       </button>
-      {error && <div className="error">{error}</div>}
+      {error && (
+        <div className="error" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <i className="ti ti-alert-circle" aria-hidden="true"></i>
+          {error}
+        </div>
+      )}
     </div>
   );
 }
