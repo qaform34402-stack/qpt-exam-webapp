@@ -1478,43 +1478,6 @@ function AnnualPlannerPage() {
   );
 }
 
-// ---- แถบกราฟแท่งเรียบง่าย (ไม่พึ่งไลบรารีภายนอก) ----
-function BarRow({ label, value, maxValue, displayValue, color }) {
-  const pct = maxValue > 0 ? Math.min(100, (value / maxValue) * 100) : 0;
-  return (
-    <div style={{ padding: "12px 4px", borderBottom: "1px solid var(--line)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 10 }}>
-        <span style={{ color: "var(--ink)", fontSize: 14, fontWeight: 500 }}>{label}</span>
-        <span
-          style={{
-            color: "white",
-            background: color || "var(--accent)",
-            fontSize: 12,
-            fontWeight: 700,
-            padding: "3px 10px",
-            borderRadius: 999,
-            flexShrink: 0,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {displayValue}
-        </span>
-      </div>
-      <div style={{ background: "var(--line)", borderRadius: 8, height: 10, overflow: "hidden" }}>
-        <div
-          style={{
-            width: pct + "%",
-            background: color || "var(--accent)",
-            height: "100%",
-            borderRadius: 8,
-            transition: "width 0.3s",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
 // ---- กราฟแท่งแนวตั้ง 12 เดือน อ่านง่ายกว่าแบบแถบนอน ----
 function MonthlyBarChart({ data, color }) {
   const width = 720;
@@ -1554,65 +1517,6 @@ function MonthlyBarChart({ data, color }) {
         );
       })}
     </svg>
-  );
-}
-
-// ---- กราฟแท่งแนวตั้งสำหรับรายการยาว (เช่น 21 หลักสูตร) เลื่อนซ้าย-ขวาได้ ----
-function RankedBarChart({ data, color, dangerColor, warnColor }) {
-  const slotWidth = 66;
-  const width = Math.max(720, data.length * slotWidth);
-  const height = 230;
-  const padding = { top: 30, bottom: 70, left: 10, right: 10 };
-  const chartH = height - padding.top - padding.bottom;
-  const barWidth = slotWidth * 0.5;
-
-  const colorFor = (v) => (v >= 80 ? color : v >= 50 ? warnColor : dangerColor);
-
-  return (
-    <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-      <svg viewBox={"0 0 " + width + " " + height} style={{ width: width, height: "auto", display: "block" }}>
-        <line
-          x1={padding.left}
-          y1={height - padding.bottom}
-          x2={width - padding.right}
-          y2={height - padding.bottom}
-          stroke="var(--line)"
-          strokeWidth="1"
-        />
-        {data.map((d, i) => {
-          const x = padding.left + i * slotWidth + (slotWidth - barWidth) / 2;
-          const barH = Math.max(3, (d.value / 100) * chartH);
-          const y = height - padding.bottom - barH;
-          const barColor = colorFor(d.value);
-          return (
-            <g key={i}>
-              <rect
-                x={x - 6}
-                y={y - 24}
-                width={barWidth + 12}
-                height={18}
-                rx={9}
-                fill={barColor}
-              />
-              <text x={x + barWidth / 2} y={y - 11} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="white">
-                {Math.round(d.value)}%
-              </text>
-              <rect x={x} y={y} width={barWidth} height={barH} rx={4} fill={barColor} />
-              <text
-                x={x + barWidth / 2}
-                y={height - padding.bottom + 14}
-                textAnchor="end"
-                fontSize="10.5"
-                fill="var(--ink-soft)"
-                transform={"rotate(-40 " + (x + barWidth / 2) + " " + (height - padding.bottom + 14) + ")"}
-              >
-                {d.shortLabel}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
   );
 }
 
@@ -1668,22 +1572,6 @@ function DashboardPage() {
     if (r.completed) monthlyStats[r.month].completed += 1;
   });
 
-  // ---- อัตราผ่านรายคอร์ส ----
-  const courseStats = {};
-  gradableRows.forEach((r) => {
-    if (!courseStats[r.course_name]) courseStats[r.course_name] = { total: 0, completed: 0 };
-    courseStats[r.course_name].total += 1;
-    if (r.completed) courseStats[r.course_name].completed += 1;
-  });
-  const courseStatsList = Object.entries(courseStats)
-    .map(([name, s]) => ({
-      name,
-      rate: s.total > 0 ? (s.completed / s.total) * 100 : 0,
-      total: s.total,
-      shortLabel: name.split(" ")[0].length <= 16 ? name.split(" ")[0] : name.slice(0, 14) + "…",
-    }))
-    .sort((a, b) => b.rate - a.rate);
-
   // ---- อัตราการเข้าอบรมรายเดือน ----
   const attendanceMonthly = {};
   for (let m = 1; m <= 12; m++) attendanceMonthly[m] = { total: 0, present: 0 };
@@ -1736,36 +1624,6 @@ function DashboardPage() {
             return { label: name, value: rate, hasData: s.total > 0 };
           })}
         />
-      )}
-
-      {/* อัตราผ่านรายคอร์ส */}
-      <h3 style={{ marginTop: 28 }}>อัตราสอบผ่านรายหลักสูตร</h3>
-      {courseStatsList.length === 0 ? (
-        <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีข้อมูล</p>
-      ) : (
-        <>
-          <RankedBarChart
-            data={courseStatsList}
-            color="var(--success)"
-            warnColor="var(--warn)"
-            dangerColor="var(--danger)"
-          />
-          <p style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 2 }}>
-            เลื่อนซ้าย-ขวาเพื่อดูหลักสูตรอื่น · เรียงจากอัตราผ่านสูงไปต่ำ
-          </p>
-          <div style={{ marginTop: 12 }}>
-            {courseStatsList.map((c) => (
-              <BarRow
-                key={c.name}
-                label={c.name}
-                value={c.rate}
-                maxValue={100}
-                displayValue={c.rate.toFixed(0) + "% (n=" + c.total + ")"}
-                color={c.rate >= 80 ? "var(--success)" : c.rate >= 50 ? "var(--warn)" : "var(--danger)"}
-              />
-            ))}
-          </div>
-        </>
       )}
 
       {/* อัตราการเข้าอบรมรายเดือน */}
