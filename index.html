@@ -463,6 +463,300 @@ function AdminCalendarPage() {
   );
 }
 
+// ---- หน้าวางแผนอบรมรายปี (แอดมิน) ----
+function AnnualPlannerPage() {
+  const [year, setYear] = useState(2026);
+  const [courses, setCourses] = useState([]);
+  const [calendarRows, setCalendarRows] = useState([]);
+  const [materialsByCourse, setMaterialsByCourse] = useState({});
+  const [examsByCourse, setExamsByCourse] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterMode, setFilterMode] = useState("all"); // all | unplanned | no_materials | no_exam
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newCourseId, setNewCourseId] = useState("");
+  const [newMonth, setNewMonth] = useState(1);
+  const [editingId, setEditingId] = useState(null);
+  const [editingMonth, setEditingMonth] = useState(1);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    loadAll();
+  }, [year]);
+
+  const loadAll = async () => {
+    setLoading(true);
+    setSaveError("");
+    const [courseRes, calRes, matRes, examRes] = await Promise.all([
+      supabaseClient.from("courses").select("id, name").order("name"),
+      supabaseClient
+        .from("training_calendar")
+        .select("id, year, month, course_id, courses(name)")
+        .eq("year", year)
+        .order("month"),
+      supabaseClient.from("course_materials").select("course_id"),
+      supabaseClient.from("exams").select("id, course_id"),
+    ]);
+
+    setCourses(courseRes.data || []);
+    setCalendarRows(calRes.data || []);
+
+    const matCount = {};
+    (matRes.data || []).forEach((r) => {
+      matCount[r.course_id] = (matCount[r.course_id] || 0) + 1;
+    });
+    setMaterialsByCourse(matCount);
+
+    const examCount = {};
+    (examRes.data || []).forEach((r) => {
+      examCount[r.course_id] = (examCount[r.course_id] || 0) + 1;
+    });
+    setExamsByCourse(examCount);
+
+    setLoading(false);
+  };
+
+  const plannedCourseIds = new Set(calendarRows.map((r) => r.course_id));
+  const unplannedCourses = courses.filter((c) => !plannedCourseIds.has(c.id));
+
+  const totalCourses = courses.length;
+  const plannedCount = plannedCourseIds.size;
+  const unplannedCount = unplannedCourses.length;
+  const examNotReadyCount = [...plannedCourseIds].filter(
+    (cid) => (examsByCourse[cid] || 0) === 0
+  ).length;
+
+  const matchesSearch = (name) =>
+    !searchQuery.trim() || (name || "").toLowerCase().includes(searchQuery.trim().toLowerCase());
+
+  const handleAddPlan = async () => {
+    if (!newCourseId || !newMonth) {
+      setSaveError("กรุณาเลือกหลักสูตรและเดือน");
+      return;
+    }
+    setSaveError("");
+    const { error } = await supabaseClient
+      .from("training_calendar")
+      .insert({ course_id: newCourseId, year, month: newMonth });
+    if (error) {
+      setSaveError("เพิ่มแผนไม่สำเร็จ: " + error.message);
+      return;
+    }
+    setShowAddForm(false);
+    setNewCourseId("");
+    setNewMonth(1);
+    loadAll();
+  };
+
+  const startEdit = (entry) => {
+    setEditingId(entry.id);
+    setEditingMonth(entry.month);
+    setSaveError("");
+  };
+
+  const saveEdit = async (entry) => {
+    const { error } = await supabaseClient
+      .from("training_calendar")
+      .update({ month: editingMonth })
+      .eq("id", entry.id);
+    if (error) {
+      setSaveError("แก้ไขไม่สำเร็จ: " + error.message);
+      return;
+    }
+    setEditingId(null);
+    loadAll();
+  };
+
+  const handleDelete = async (entry) => {
+    if (!window.confirm("ลบแผนอบรม \"" + (entry.courses ? entry.courses.name : "") + "\" เดือน " + MONTH_NAMES[entry.month] + " ออกจากปฏิทินหรือไม่?")) {
+      return;
+    }
+    const { error } = await supabaseClient.from("training_calendar").delete().eq("id", entry.id);
+    if (error) {
+      setSaveError("ลบไม่สำเร็จ: " + error.message + " (อาจมีข้อมูล session/ผลสอบผูกอยู่กับแผนนี้แล้ว)");
+      return;
+    }
+    loadAll();
+  };
+
+  if (loading) return <div className="page">กำลังโหลด...</div>;
+
+  // filter entries per month based on filterMode + search
+  const visibleEntriesByMonth = {};
+  for (let m = 1; m <= 12; m++) {
+    visibleEntriesByMonth[m] = calendarRows.filter((entry) => {
+      if (entry.month !== m) return false;
+      const name = entry.courses ? entry.courses.name : "";
+      if (!matchesSearch(name)) return false;
+      if (filterMode === "no_materials") return (materialsByCourse[entry.course_id] || 0) === 0;
+      if (filterMode === "no_exam") return (examsByCourse[entry.course_id] || 0) === 0;
+      return true;
+    });
+  }
+
+  const visibleUnplanned = unplannedCourses.filter((c) => matchesSearch(c.name));
+
+  return (
+    <div className="page">
+      <div className="header-row">
+        <h2>แผนอบรมประจำปี {year}</h2>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
+          <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
+          <button onClick={() => setShowAddForm(!showAddForm)}>+ เพิ่มแผนอบรม</button>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", margin: "12px 0", fontSize: 14, color: "#344054" }}>
+        <span>หลักสูตรทั้งหมด <b>{totalCourses}</b></span>
+        <span>วางแผนแล้ว <b style={{ color: "#067647" }}>{plannedCount}</b></span>
+        <span>ยังไม่วางแผน <b style={{ color: "#b42318" }}>{unplannedCount}</b></span>
+        <span>ข้อสอบยังไม่พร้อม <b style={{ color: "#b42318" }}>{examNotReadyCount}</b></span>
+      </div>
+
+      {showAddForm && (
+        <div className="course-card" style={{ cursor: "default" }}>
+          <div className="new-session-row">
+            <select value={newCourseId} onChange={(e) => setNewCourseId(e.target.value)}>
+              <option value="" disabled>เลือกหลักสูตร</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <select value={newMonth} onChange={(e) => setNewMonth(parseInt(e.target.value, 10))}>
+              {MONTH_NAMES.slice(1).map((name, i) => (
+                <option key={i + 1} value={i + 1}>{name}</option>
+              ))}
+            </select>
+            <button onClick={handleAddPlan}>บันทึก</button>
+            <button className="secondary" onClick={() => setShowAddForm(false)}>ยกเลิก</button>
+          </div>
+        </div>
+      )}
+
+      <input
+        type="text"
+        placeholder="ค้นหาชื่อหลักสูตร..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+
+      <div className="month-tabs">
+        {[
+          { key: "all", label: "ทั้งหมด" },
+          { key: "unplanned", label: "ยังไม่วางแผน" },
+          { key: "no_materials", label: "ขาดเอกสาร" },
+          { key: "no_exam", label: "ขาดข้อสอบ" },
+        ].map((f) => (
+          <div
+            key={f.key}
+            className={"month-tab" + (filterMode === f.key ? " active" : "")}
+            onClick={() => setFilterMode(f.key)}
+          >
+            {f.label}
+          </div>
+        ))}
+      </div>
+
+      {saveError && <p className="error">{saveError}</p>}
+
+      {filterMode === "unplanned" ? (
+        visibleUnplanned.length === 0 ? (
+          <p style={{ color: "#667085" }}>ไม่มีหลักสูตรที่ยังไม่ได้วางแผน 🎉</p>
+        ) : (
+          visibleUnplanned.map((c) => (
+            <div className="course-card" style={{ cursor: "default" }} key={c.id}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 600 }}>{c.name}</span>
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    setNewCourseId(c.id);
+                    setShowAddForm(true);
+                  }}
+                >
+                  + วางแผน
+                </button>
+              </div>
+            </div>
+          ))
+        )
+      ) : (
+        MONTH_NAMES.slice(1).map((monthName, idx) => {
+          const m = idx + 1;
+          const entries = visibleEntriesByMonth[m];
+          if (filterMode !== "all" && entries.length === 0) return null;
+          return (
+            <div key={m} style={{ marginTop: 20 }}>
+              <h3 style={{ borderBottom: "1px solid #eaecf0", paddingBottom: 6 }}>{monthName}</h3>
+              {entries.length === 0 ? (
+                <p style={{ color: "#667085" }}>ยังไม่มีแผนอบรม</p>
+              ) : (
+                entries.map((entry) => {
+                  const matCount = materialsByCourse[entry.course_id] || 0;
+                  const examCount = examsByCourse[entry.course_id] || 0;
+                  const isEditing = editingId === entry.id;
+                  return (
+                    <div className="course-card" style={{ cursor: "default" }} key={entry.id}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>
+                            {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+                          </div>
+                          <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>เอกสาร {matCount}</span>
+                          <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>ข้อสอบ {examCount}</span>
+                        </div>
+                        {isEditing ? (
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <select value={editingMonth} onChange={(e) => setEditingMonth(parseInt(e.target.value, 10))}>
+                              {MONTH_NAMES.slice(1).map((name, i) => (
+                                <option key={i + 1} value={i + 1}>{name}</option>
+                              ))}
+                            </select>
+                            <button onClick={() => saveEdit(entry)}>บันทึก</button>
+                            <button className="secondary" onClick={() => setEditingId(null)}>ยกเลิก</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button className="secondary" onClick={() => startEdit(entry)}>ย้ายเดือน</button>
+                            <button className="secondary" onClick={() => handleDelete(entry)}>ลบ</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ---- หน้ารวมของแอดมิน: สลับ "ดูคะแนน" กับ "วางแผนรายปี" ----
+function AdminHubPage() {
+  const [tab, setTab] = useState("scores"); // scores | planner
+  return (
+    <div>
+      <div className="page" style={{ paddingBottom: 0 }}>
+        <div className="month-tabs">
+          <div className={"month-tab" + (tab === "scores" ? " active" : "")} onClick={() => setTab("scores")}>
+            ดูคะแนน
+          </div>
+          <div className={"month-tab" + (tab === "planner" ? " active" : "")} onClick={() => setTab("planner")}>
+            วางแผนรายปี
+          </div>
+        </div>
+      </div>
+      {tab === "scores" && <AdminCalendarPage />}
+      {tab === "planner" && <AnnualPlannerPage />}
+    </div>
+  );
+}
+
+
 // ---- แถวมาร์คการเข้าอบรมของพนักงาน 1 คน ----
 function AttendanceRow({ emp, data, onToggle, onNote, onRemove }) {
   // กันไว้เผื่อ data ยังไม่มา (ไม่ควรเกิดขึ้นแล้วหลังแก้ openSession แต่กันพลาดไว้)
@@ -1100,7 +1394,7 @@ function Dashboard({ session, role, onLogout }) {
         </div>
       )}
 
-      {role === "admin" && activeTab === "main" && <AdminCalendarPage />}
+      {role === "admin" && activeTab === "main" && <AdminHubPage />}
       {role === "foreman" && activeTab === "main" && <ForemanPage session={session} />}
       {hasMainDuty && activeTab === "exam" && <EmployeePage session={session} />}
 
