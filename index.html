@@ -480,6 +480,20 @@ function AnnualPlannerPage() {
   const [editingMonth, setEditingMonth] = useState(1);
   const [saveError, setSaveError] = useState("");
 
+  // ---- รายละเอียดแผน: จัดการเอกสาร + ข้อสอบของหลักสูตรนั้น ----
+  const [selectedPlanEntry, setSelectedPlanEntry] = useState(null);
+  const [planMaterials, setPlanMaterials] = useState([]);
+  const [planExams, setPlanExams] = useState([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const [newMaterialTitle, setNewMaterialTitle] = useState("");
+  const [newMaterialUrl, setNewMaterialUrl] = useState("");
+  const [editingMaterialId, setEditingMaterialId] = useState(null);
+  const [editingMaterialTitle, setEditingMaterialTitle] = useState("");
+  const [editingMaterialUrl, setEditingMaterialUrl] = useState("");
+  const [editingExamId, setEditingExamId] = useState(null);
+  const [editingExamUrl, setEditingExamUrl] = useState("");
+
   useEffect(() => {
     loadAll();
   }, [year]);
@@ -579,7 +593,239 @@ function AnnualPlannerPage() {
     loadAll();
   };
 
+  // ---- เปิดหน้ารายละเอียด: โหลดเอกสาร + ข้อสอบของหลักสูตรนี้ ----
+  const openPlanDetail = async (entry) => {
+    setSelectedPlanEntry(entry);
+    setDetailError("");
+    setLoadingDetail(true);
+    const [matRes, examRes] = await Promise.all([
+      supabaseClient
+        .from("course_materials")
+        .select("id, title, drive_url")
+        .eq("course_id", entry.course_id),
+      supabaseClient
+        .from("exams")
+        .select("id, exam_name, exam_form_url")
+        .eq("course_id", entry.course_id)
+        .order("exam_name"),
+    ]);
+    setPlanMaterials(matRes.data || []);
+    setPlanExams(examRes.data || []);
+    setLoadingDetail(false);
+  };
+
+  const refreshPlanDetail = () => {
+    if (selectedPlanEntry) openPlanDetail(selectedPlanEntry);
+  };
+
+  const addMaterial = async () => {
+    if (!newMaterialTitle.trim() || !newMaterialUrl.trim()) {
+      setDetailError("กรุณากรอกชื่อเอกสารและลิงก์ให้ครบ");
+      return;
+    }
+    setDetailError("");
+    const { error } = await supabaseClient.from("course_materials").insert({
+      course_id: selectedPlanEntry.course_id,
+      title: newMaterialTitle.trim(),
+      drive_url: newMaterialUrl.trim(),
+    });
+    if (error) {
+      setDetailError("เพิ่มเอกสารไม่สำเร็จ: " + error.message);
+      return;
+    }
+    setNewMaterialTitle("");
+    setNewMaterialUrl("");
+    refreshPlanDetail();
+    loadAll();
+  };
+
+  const startEditMaterial = (m) => {
+    setEditingMaterialId(m.id);
+    setEditingMaterialTitle(m.title || "");
+    setEditingMaterialUrl(m.drive_url || "");
+  };
+
+  const saveEditMaterial = async (m) => {
+    if (!editingMaterialUrl.trim()) {
+      setDetailError("ลิงก์เอกสารห้ามว่าง");
+      return;
+    }
+    const { error } = await supabaseClient
+      .from("course_materials")
+      .update({ title: editingMaterialTitle.trim(), drive_url: editingMaterialUrl.trim() })
+      .eq("id", m.id);
+    if (error) {
+      setDetailError("แก้ไขเอกสารไม่สำเร็จ: " + error.message);
+      return;
+    }
+    setEditingMaterialId(null);
+    refreshPlanDetail();
+  };
+
+  const deleteMaterial = async (m) => {
+    if (!window.confirm("ลบเอกสาร \"" + (m.title || m.drive_url) + "\" หรือไม่?")) return;
+    const { error } = await supabaseClient.from("course_materials").delete().eq("id", m.id);
+    if (error) {
+      setDetailError("ลบเอกสารไม่สำเร็จ: " + error.message);
+      return;
+    }
+    refreshPlanDetail();
+    loadAll();
+  };
+
+  const startEditExam = (ex) => {
+    setEditingExamId(ex.id);
+    setEditingExamUrl(ex.exam_form_url || "");
+  };
+
+  const saveEditExam = async (ex) => {
+    if (!editingExamUrl.trim()) {
+      setDetailError("ลิงก์ข้อสอบห้ามว่าง");
+      return;
+    }
+    const confirmed = window.confirm(
+      "⚠️ คำเตือนสำคัญ: การเปลี่ยนลิงก์ข้อสอบต้องตั้งค่าปลายทางคำตอบ (response destination) " +
+      "ของฟอร์มใหม่ให้ไปที่ไฟล์คำตอบรวมเดิม แล้วรันฟังก์ชัน syncResponseTabNames() " +
+      "ใน Apps Script ใหม่อีกครั้ง ไม่งั้นผลสอบของวิชานี้จะหยุดบันทึกเข้าระบบทันทีแบบไม่มี error เตือน\n\n" +
+      "ยืนยันว่าตั้งค่าฝั่ง Google Form/Apps Script เรียบร้อยแล้ว และต้องการบันทึกลิงก์ใหม่นี้ใช่หรือไม่?"
+    );
+    if (!confirmed) return;
+
+    const { error } = await supabaseClient
+      .from("exams")
+      .update({ exam_form_url: editingExamUrl.trim() })
+      .eq("id", ex.id);
+    if (error) {
+      setDetailError("แก้ไขลิงก์ข้อสอบไม่สำเร็จ: " + error.message);
+      return;
+    }
+    setEditingExamId(null);
+    refreshPlanDetail();
+  };
+
   if (loading) return <div className="page">กำลังโหลด...</div>;
+
+  // ---- หน้ารายละเอียด: จัดการเอกสาร + ข้อสอบของหลักสูตรนี้ ----
+  if (selectedPlanEntry) {
+    return (
+      <div className="page">
+        <div className="header-row">
+          <button className="secondary" onClick={() => setSelectedPlanEntry(null)}>
+            ← กลับไปแผนอบรม
+          </button>
+          <button className="refresh-btn" onClick={refreshPlanDetail}>🔄 รีเฟรช</button>
+        </div>
+        <h2 style={{ marginTop: 16 }}>
+          {selectedPlanEntry.courses ? selectedPlanEntry.courses.name : "หลักสูตร"}
+        </h2>
+        <p style={{ color: "#667085" }}>
+          {MONTH_NAMES[selectedPlanEntry.month]} {selectedPlanEntry.year}
+        </p>
+
+        {detailError && <p className="error">{detailError}</p>}
+
+        {loadingDetail ? (
+          <p style={{ color: "#667085" }}>กำลังโหลด...</p>
+        ) : (
+          <>
+            <h3 style={{ marginTop: 20 }}>เอกสารอบรม</h3>
+            {planMaterials.length === 0 && (
+              <p style={{ color: "#667085" }}>ยังไม่มีเอกสาร</p>
+            )}
+            {planMaterials.map((m) => (
+              <div className="attendance-row" key={m.id}>
+                {editingMaterialId === m.id ? (
+                  <div style={{ flex: 1, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <input
+                      type="text"
+                      placeholder="ชื่อเอกสาร"
+                      value={editingMaterialTitle}
+                      onChange={(e) => setEditingMaterialTitle(e.target.value)}
+                      style={{ flex: 1, minWidth: 140 }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="ลิงก์ Google Drive"
+                      value={editingMaterialUrl}
+                      onChange={(e) => setEditingMaterialUrl(e.target.value)}
+                      style={{ flex: 2, minWidth: 200 }}
+                    />
+                    <button onClick={() => saveEditMaterial(m)}>บันทึก</button>
+                    <button className="secondary" onClick={() => setEditingMaterialId(null)}>ยกเลิก</button>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ flex: 1 }}>
+                      <div className="name">{m.title || "(ไม่มีชื่อ)"}</div>
+                      <div className="meta">
+                        <a href={m.drive_url} target="_blank" rel="noopener noreferrer">
+                          เปิดเอกสาร
+                        </a>
+                      </div>
+                    </div>
+                    <button className="secondary" onClick={() => startEditMaterial(m)}>แก้ไข</button>
+                    <button className="secondary" onClick={() => deleteMaterial(m)}>ลบ</button>
+                  </>
+                )}
+              </div>
+            ))}
+
+            <div className="new-session-row" style={{ marginTop: 12 }}>
+              <input
+                type="text"
+                placeholder="ชื่อเอกสารใหม่"
+                value={newMaterialTitle}
+                onChange={(e) => setNewMaterialTitle(e.target.value)}
+                style={{ flex: 1, minWidth: 140 }}
+              />
+              <input
+                type="text"
+                placeholder="ลิงก์ Google Drive"
+                value={newMaterialUrl}
+                onChange={(e) => setNewMaterialUrl(e.target.value)}
+                style={{ flex: 2, minWidth: 200 }}
+              />
+              <button onClick={addMaterial}>+ เพิ่มเอกสาร</button>
+            </div>
+
+            <h3 style={{ marginTop: 28 }}>ข้อสอบ</h3>
+            {planExams.length === 0 && (
+              <p style={{ color: "#667085" }}>ยังไม่มีข้อสอบสำหรับหลักสูตรนี้</p>
+            )}
+            {planExams.map((ex) => (
+              <div className="attendance-row" key={ex.id}>
+                {editingExamId === ex.id ? (
+                  <div style={{ flex: 1, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <input
+                      type="text"
+                      placeholder="ลิงก์ Google Form (URL เต็ม)"
+                      value={editingExamUrl}
+                      onChange={(e) => setEditingExamUrl(e.target.value)}
+                      style={{ flex: 1, minWidth: 260 }}
+                    />
+                    <button onClick={() => saveEditExam(ex)}>บันทึก</button>
+                    <button className="secondary" onClick={() => setEditingExamId(null)}>ยกเลิก</button>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ flex: 1 }}>
+                      <div className="name">{ex.exam_name}</div>
+                      <div className="meta">
+                        <a href={ex.exam_form_url} target="_blank" rel="noopener noreferrer">
+                          เปิดฟอร์มข้อสอบ
+                        </a>
+                      </div>
+                    </div>
+                    <button className="secondary" onClick={() => startEditExam(ex)}>แก้ไขลิงก์</button>
+                  </>
+                )}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    );
+  }
 
   // filter entries per month based on filterMode + search
   const visibleEntriesByMonth = {};
@@ -699,7 +945,10 @@ function AnnualPlannerPage() {
                   return (
                     <div className="course-card" style={{ cursor: "default" }} key={entry.id}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-                        <div>
+                        <div
+                          style={{ cursor: "pointer" }}
+                          onClick={() => openPlanDetail(entry)}
+                        >
                           <div style={{ fontWeight: 600 }}>
                             {entry.courses ? entry.courses.name : "(ไม่พบชื่อหลักสูตร)"}
                           </div>
@@ -717,7 +966,8 @@ function AnnualPlannerPage() {
                             <button className="secondary" onClick={() => setEditingId(null)}>ยกเลิก</button>
                           </div>
                         ) : (
-                          <div style={{ display: "flex", gap: 8 }}>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button className="secondary" onClick={() => openPlanDetail(entry)}>จัดการเอกสาร/ข้อสอบ</button>
                             <button className="secondary" onClick={() => startEdit(entry)}>ย้ายเดือน</button>
                             <button className="secondary" onClick={() => handleDelete(entry)}>ลบ</button>
                           </div>
