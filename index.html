@@ -295,6 +295,29 @@
   .icon-circle.ok { background: var(--accent-bg); color: var(--accent-dark); }
   .icon-circle.warn { background: var(--warn-bg); color: var(--warn); }
   .icon-circle.fail { background: var(--danger-bg); color: var(--danger); }
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-bg);
+    color: var(--accent-dark);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-family: "Prompt", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: white;
+    padding: 11px 18px;
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 14.5px;
+  }
 
   /* ---- โครงสร้าง Sidebar (responsive: จอกว้าง=แถบข้าง, จอแคบ=เมนูเลื่อน) ---- */
   .app-shell { display: flex; min-height: 100vh; }
@@ -335,8 +358,8 @@
   .sidebar-item.active { background: var(--accent); color: white; }
   .sidebar-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
   .main-content { flex: 1; min-width: 0; }
-  .mobile-topbar {
-    display: none;
+  .content-topbar {
+    display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 14px 16px;
@@ -345,8 +368,12 @@
     position: sticky;
     top: 0;
     z-index: 40;
+    gap: 10px;
   }
+  .content-topbar-left { display: flex; align-items: center; gap: 10px; }
+  .content-topbar-right { display: flex; align-items: center; gap: 10px; }
   .hamburger-btn {
+    display: none;
     background: transparent;
     border: none;
     color: var(--ink);
@@ -354,6 +381,20 @@
     padding: 4px;
     cursor: pointer;
   }
+  .logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    color: var(--danger);
+    border: 1px solid var(--danger-bg);
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .logout-btn:hover { background: var(--danger-bg); }
   .drawer-overlay {
     display: none;
     position: fixed;
@@ -364,7 +405,7 @@
   .drawer-overlay.open { display: block; }
   @media (max-width: 899px) {
     .sidebar { display: none; }
-    .mobile-topbar { display: flex; }
+    .hamburger-btn { display: block; }
     .sidebar.drawer-open {
       display: flex;
       position: fixed;
@@ -1097,7 +1138,10 @@ function AnnualPlannerPage() {
           <p style={{ color: "#667085" }}>กำลังโหลด...</p>
         ) : (
           <>
-            <h3 style={{ marginTop: 20 }}>เอกสารอบรม</h3>
+            <div className="section-title" style={{ marginTop: 20 }}>
+              <i className="ti ti-folder" aria-hidden="true"></i>
+              เอกสารอบรม
+            </div>
             {planMaterials.length === 0 && (
               <p style={{ color: "#667085" }}>ยังไม่มีเอกสาร</p>
             )}
@@ -1141,18 +1185,28 @@ function AnnualPlannerPage() {
 
             {uploadError && <p className="error">{uploadError}</p>}
 
-            <div style={{ marginTop: 12 }}>
+            <div
+              style={{
+                marginTop: 14,
+                padding: 16,
+                borderRadius: 14,
+                background: "var(--accent-bg)",
+                border: "1px dashed var(--accent)",
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 14, color: "var(--accent-dark)", marginBottom: 10 }}>
+                <i className="ti ti-circle-plus" aria-hidden="true" style={{ marginRight: 6 }}></i>
+                เพิ่มเอกสารใหม่
+              </div>
               <label
-                className="secondary"
+                className="upload-btn"
                 style={{
-                  display: "inline-block",
-                  padding: "10px 16px",
-                  borderRadius: 10,
                   cursor: uploadingFile ? "default" : "pointer",
                   opacity: uploadingFile ? 0.6 : 1,
                 }}
               >
-                {uploadingFile ? "⏳ กำลังอัปโหลด..." : "📎 อัปโหลดไฟล์ PDF"}
+                <i className={"ti " + (uploadingFile ? "ti-loader-2" : "ti-file-upload")} aria-hidden="true"></i>
+                {uploadingFile ? "กำลังอัปโหลด..." : "อัปโหลดไฟล์ PDF"}
                 <input
                   type="file"
                   accept="application/pdf"
@@ -1161,27 +1215,27 @@ function AnnualPlannerPage() {
                   style={{ display: "none" }}
                 />
               </label>
-              <span style={{ marginLeft: 10, fontSize: 13, color: "#667085" }}>
+              <span style={{ marginLeft: 10, fontSize: 13, color: "var(--accent-dark)" }}>
                 หรือวางลิงก์ Google Drive เองด้านล่าง
               </span>
-            </div>
 
-            <div className="new-session-row" style={{ marginTop: 8 }}>
-              <input
-                type="text"
-                placeholder="ชื่อเอกสารใหม่"
-                value={newMaterialTitle}
-                onChange={(e) => setNewMaterialTitle(e.target.value)}
-                style={{ flex: 1, minWidth: 140 }}
-              />
-              <input
-                type="text"
-                placeholder="ลิงก์ Google Drive (เติมอัตโนมัติถ้าอัปโหลดไฟล์ด้านบน)"
-                value={newMaterialUrl}
-                onChange={(e) => setNewMaterialUrl(e.target.value)}
-                style={{ flex: 2, minWidth: 200 }}
-              />
-              <button onClick={addMaterial}>+ เพิ่มเอกสาร</button>
+              <div className="new-session-row" style={{ marginTop: 12 }}>
+                <input
+                  type="text"
+                  placeholder="ชื่อเอกสารใหม่"
+                  value={newMaterialTitle}
+                  onChange={(e) => setNewMaterialTitle(e.target.value)}
+                  style={{ flex: 1, minWidth: 140, margin: 0 }}
+                />
+                <input
+                  type="text"
+                  placeholder="ลิงก์ Google Drive (เติมอัตโนมัติถ้าอัปโหลดไฟล์ด้านบน)"
+                  value={newMaterialUrl}
+                  onChange={(e) => setNewMaterialUrl(e.target.value)}
+                  style={{ flex: 2, minWidth: 200, margin: 0 }}
+                />
+                <button onClick={addMaterial}>+ เพิ่มเอกสาร</button>
+              </div>
             </div>
 
             <h3 style={{ marginTop: 28 }}>ข้อสอบ</h3>
@@ -1425,18 +1479,31 @@ function AnnualPlannerPage() {
 function BarRow({ label, value, maxValue, displayValue, color }) {
   const pct = maxValue > 0 ? Math.min(100, (value / maxValue) * 100) : 0;
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 3 }}>
-        <span style={{ color: "var(--ink)" }}>{label}</span>
-        <span style={{ color: "var(--ink-soft)" }}>{displayValue}</span>
+    <div style={{ padding: "12px 4px", borderBottom: "1px solid var(--line)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 10 }}>
+        <span style={{ color: "var(--ink)", fontSize: 14, fontWeight: 500 }}>{label}</span>
+        <span
+          style={{
+            color: "white",
+            background: color || "var(--accent)",
+            fontSize: 12,
+            fontWeight: 700,
+            padding: "3px 10px",
+            borderRadius: 999,
+            flexShrink: 0,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {displayValue}
+        </span>
       </div>
-      <div style={{ background: "var(--line)", borderRadius: 6, height: 14, overflow: "hidden" }}>
+      <div style={{ background: "var(--line)", borderRadius: 8, height: 10, overflow: "hidden" }}>
         <div
           style={{
             width: pct + "%",
             background: color || "var(--accent)",
             height: "100%",
-            borderRadius: 6,
+            borderRadius: 8,
             transition: "width 0.3s",
           }}
         />
@@ -2380,12 +2447,6 @@ function Dashboard({ session, role, onLogout }) {
           {item.label}
         </div>
       ))}
-      <div className="sidebar-footer">
-        <div className="sidebar-item" onClick={onLogout}>
-          <i className="ti ti-logout-2" aria-hidden="true"></i>
-          ออกจากระบบ
-        </div>
-      </div>
     </React.Fragment>
   );
 
@@ -2395,12 +2456,21 @@ function Dashboard({ session, role, onLogout }) {
       {drawerOpen && <div className="drawer-overlay open" onClick={() => setDrawerOpen(false)}></div>}
 
       <div className="main-content">
-        <div className="mobile-topbar">
-          <button className="hamburger-btn" onClick={() => setDrawerOpen(true)}>
-            <i className="ti ti-menu-2" aria-hidden="true"></i>
-          </button>
-          <span className="role-badge" style={{ marginBottom: 0 }}>{roleLabel}</span>
+        <div className="content-topbar">
+          <div className="content-topbar-left">
+            <button className="hamburger-btn" onClick={() => setDrawerOpen(true)}>
+              <i className="ti ti-menu-2" aria-hidden="true"></i>
+            </button>
+            <span className="role-badge" style={{ marginBottom: 0 }}>{roleLabel}</span>
+          </div>
+          <div className="content-topbar-right">
+            <button className="logout-btn" onClick={onLogout}>
+              <i className="ti ti-logout-2" aria-hidden="true"></i>
+              ออกจากระบบ
+            </button>
+          </div>
         </div>
+
         {renderContent()}
       </div>
     </div>
