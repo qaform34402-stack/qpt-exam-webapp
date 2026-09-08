@@ -273,6 +273,84 @@
   .icon-circle.ok { background: var(--accent-bg); color: var(--accent-dark); }
   .icon-circle.warn { background: var(--warn-bg); color: var(--warn); }
   .icon-circle.fail { background: var(--danger-bg); color: var(--danger); }
+
+  /* ---- โครงสร้าง Sidebar (responsive: จอกว้าง=แถบข้าง, จอแคบ=เมนูเลื่อน) ---- */
+  .app-shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px 20px;
+    font-family: "Prompt", sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--accent-dark);
+  }
+  .sidebar-logo .icon-circle { width: 34px; height: 34px; font-size: 16px; }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    font-weight: 500;
+  }
+  .sidebar-item i { font-size: 18px; }
+  .sidebar-item:hover { background: var(--cream-hover, #F5F5F5); }
+  .sidebar-item.active { background: var(--accent); color: white; }
+  .sidebar-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
+  .main-content { flex: 1; min-width: 0; }
+  .mobile-topbar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+  .hamburger-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    font-size: 24px;
+    padding: 4px;
+    cursor: pointer;
+  }
+  .drawer-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(59,58,54,0.35);
+    z-index: 90;
+  }
+  .drawer-overlay.open { display: block; }
+  @media (max-width: 899px) {
+    .sidebar { display: none; }
+    .mobile-topbar { display: flex; }
+    .sidebar.drawer-open {
+      display: flex;
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 100;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+    }
+  }
 </style>
 </head>
 <body>
@@ -1438,33 +1516,6 @@ function DashboardPage() {
   );
 }
 
-function AdminHubPage() {
-  const [tab, setTab] = useState("scores"); // scores | planner | dashboard
-  return (
-    <div>
-      <div className="nav-section">
-        <div className="tile-row">
-          <div className={"tile tile-orange" + (tab === "scores" ? " active" : "")} onClick={() => setTab("scores")}>
-            <i className="ti ti-chart-bar tile-icon" aria-hidden="true"></i>
-            <span className="tile-label">ดูคะแนน</span>
-          </div>
-          <div className={"tile tile-purple" + (tab === "planner" ? " active" : "")} onClick={() => setTab("planner")}>
-            <i className="ti ti-calendar-event tile-icon" aria-hidden="true"></i>
-            <span className="tile-label">วางแผนรายปี</span>
-          </div>
-          <div className={"tile tile-teal" + (tab === "dashboard" ? " active" : "")} onClick={() => setTab("dashboard")}>
-            <i className="ti ti-layout-dashboard tile-icon" aria-hidden="true"></i>
-            <span className="tile-label">Dashboard</span>
-          </div>
-        </div>
-      </div>
-      {tab === "scores" && <AdminCalendarPage />}
-      {tab === "planner" && <AnnualPlannerPage />}
-      {tab === "dashboard" && <DashboardPage />}
-    </div>
-  );
-}
-
 
 // ---- แถวมาร์คการเข้าอบรมของพนักงาน 1 คน ----
 function AttendanceRow({ emp, data, onToggle, onNote, onRemove }) {
@@ -2069,47 +2120,124 @@ function EmployeePage({ session }) {
 }
 
 // ---- หน้ารวม แยกตาม role ----
-function Dashboard({ session, role, onLogout }) {
-  const roleLabel = { admin: "แอดมิน (เจ้าหน้าที่)", foreman: "Foreman", employee: "พนักงาน" }[role] || role;
-
-  // admin/foreman มีหน้าที่หลักของตัวเอง + ต้องสอบด้วยเหมือนกัน จึงมีแท็บให้สลับ
-  // employee มีแค่หน้าสอบอย่างเดียว ไม่ต้องมีแท็บ
-  const hasMainDuty = role === "admin" || role === "foreman";
-  const [activeTab, setActiveTab] = useState("main");
+// ---- หน้าหลัก: ต้อนรับ + ทางลัดไปหน้าอื่น ----
+function HomePage({ role, navItems, onNavigate }) {
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "สวัสดีตอนเช้า" : hour < 18 ? "สวัสดีตอนบ่าย" : "สวัสดีตอนเย็น";
+  const shortcuts = navItems.filter((item) => item.key !== "home");
 
   return (
-    <div>
-      <div className="topbar">
-        <span className="role-badge">{roleLabel}</span>
-        <button className="secondary" onClick={onLogout}>ออกจากระบบ</button>
+    <div className="page">
+      <div className="nav-section" style={{ padding: 20 }}>
+        <h2 style={{ margin: 0 }}>{greeting} 👋</h2>
+        <p style={{ color: "var(--ink-soft)", marginTop: 6, marginBottom: 0 }}>
+          ยินดีต้อนรับสู่ระบบข้อสอบ QPT เลือกเมนูที่ต้องการทำต่อได้จากด้านล่าง
+        </p>
       </div>
-
-      {hasMainDuty && (
-        <div className="nav-section">
-          <div className="tile-row">
-            <div
-              className={"tile tile-green" + (activeTab === "main" ? " active" : "")}
-              onClick={() => setActiveTab("main")}
-            >
-              <i className="ti ti-briefcase tile-icon" aria-hidden="true"></i>
-              <span className="tile-label">งานของฉัน</span>
-            </div>
-            <div
-              className={"tile tile-blue" + (activeTab === "exam" ? " active" : "")}
-              onClick={() => setActiveTab("exam")}
-            >
-              <i className="ti ti-pencil tile-icon" aria-hidden="true"></i>
-              <span className="tile-label">สอบของฉัน</span>
-            </div>
+      <div className="tile-row" style={{ marginTop: 4 }}>
+        {shortcuts.map((item) => (
+          <div
+            key={item.key}
+            className={"tile tile-" + item.color}
+            onClick={() => onNavigate(item.key)}
+          >
+            <i className={"ti " + item.icon + " tile-icon"} aria-hidden="true"></i>
+            <span className="tile-label">{item.label}</span>
           </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---- หน้ารวม แยกตาม role: โครง Sidebar (จอกว้าง) / เมนูเลื่อน (จอแคบ) ----
+function Dashboard({ session, role, onLogout }) {
+  const roleLabel = { admin: "แอดมิน (เจ้าหน้าที่)", foreman: "Foreman", employee: "พนักงาน" }[role] || role;
+  const [view, setView] = useState("home");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const navItemsByRole = {
+    admin: [
+      { key: "home", label: "หน้าหลัก", icon: "ti-home", color: "green" },
+      { key: "scores", label: "ดูคะแนน", icon: "ti-chart-bar", color: "orange" },
+      { key: "planner", label: "วางแผนรายปี", icon: "ti-calendar-event", color: "purple" },
+      { key: "dashboard", label: "Dashboard", icon: "ti-layout-dashboard", color: "teal" },
+      { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue" },
+    ],
+    foreman: [
+      { key: "home", label: "หน้าหลัก", icon: "ti-home", color: "green" },
+      { key: "main", label: "งานของฉัน", icon: "ti-briefcase", color: "green" },
+      { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue" },
+    ],
+    employee: [
+      { key: "home", label: "หน้าหลัก", icon: "ti-home", color: "green" },
+      { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue" },
+    ],
+  };
+  const navItems = navItemsByRole[role] || navItemsByRole.employee;
+
+  const goTo = (key) => {
+    setView(key);
+    setDrawerOpen(false);
+  };
+
+  const renderContent = () => {
+    if (view === "home") return <HomePage role={role} navItems={navItems} onNavigate={goTo} />;
+    if (role === "admin") {
+      if (view === "scores") return <AdminCalendarPage />;
+      if (view === "planner") return <AnnualPlannerPage />;
+      if (view === "dashboard") return <DashboardPage />;
+      if (view === "exam") return <EmployeePage session={session} />;
+    }
+    if (role === "foreman") {
+      if (view === "main") return <ForemanPage session={session} />;
+      if (view === "exam") return <EmployeePage session={session} />;
+    }
+    return <EmployeePage session={session} />;
+  };
+
+  const sidebarInner = (
+    <React.Fragment>
+      <div className="sidebar-logo">
+        <div className="icon-circle ok">
+          <i className="ti ti-clipboard-check" aria-hidden="true"></i>
         </div>
-      )}
+        QPT
+      </div>
+      {navItems.map((item) => (
+        <div
+          key={item.key}
+          className={"sidebar-item" + (view === item.key ? " active" : "")}
+          onClick={() => goTo(item.key)}
+        >
+          <i className={"ti " + item.icon} aria-hidden="true"></i>
+          {item.label}
+        </div>
+      ))}
+      <div className="sidebar-footer">
+        <div className="sidebar-item" onClick={onLogout}>
+          <i className="ti ti-logout-2" aria-hidden="true"></i>
+          ออกจากระบบ
+        </div>
+      </div>
+    </React.Fragment>
+  );
 
-      {role === "admin" && activeTab === "main" && <AdminHubPage />}
-      {role === "foreman" && activeTab === "main" && <ForemanPage session={session} />}
-      {hasMainDuty && activeTab === "exam" && <EmployeePage session={session} />}
+  return (
+    <div className="app-shell">
+      <div className={"sidebar" + (drawerOpen ? " drawer-open" : "")}>{sidebarInner}</div>
+      {drawerOpen && <div className="drawer-overlay open" onClick={() => setDrawerOpen(false)}></div>}
 
-      {role === "employee" && <EmployeePage session={session} />}
+      <div className="main-content">
+        <div className="mobile-topbar">
+          <button className="hamburger-btn" onClick={() => setDrawerOpen(true)}>
+            <i className="ti ti-menu-2" aria-hidden="true"></i>
+          </button>
+          <span className="role-badge" style={{ marginBottom: 0 }}>{roleLabel}</span>
+        </div>
+        {renderContent()}
+      </div>
     </div>
   );
 }
