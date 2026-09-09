@@ -20,11 +20,11 @@
     --ink: #3B3A36;
     --ink-soft: #8C8878;
     --line: #EFE7D6;
-    /* สีหลักของแบรนด์ (ปุ่ม, เมนูที่เลือกอยู่) - กุหลาบ/แดงอมชมพูสด ไม่ใช่เขียว/ม่วง/น้ำเงิน/ฟ้า */
-    --accent: #C81E5C;
-    --accent-dark: #8F1345;
-    --accent-bg: #FCE4ED;
-    /* สีความหมาย "ผ่าน/สำเร็จ" แยกจากสีแบรนด์ ยังคงเป็นเขียวเพราะเป็นมาตรฐานสากล */
+    /* สีหลักของแบรนด์ (ปุ่ม, เมนูที่เลือกอยู่) - โทนเขียว */
+    --accent: #15803D;
+    --accent-dark: #14532D;
+    --accent-bg: #DCFCE7;
+    /* สีความหมาย "ผ่าน/สำเร็จ" อยู่ในโทนเขียวเดียวกันอยู่แล้ว */
     --success: #1B6B4A;
     --success-dark: #145038;
     --success-bg: #E4F5EC;
@@ -60,11 +60,11 @@
   }
   .tile .tile-label { font-weight: 700; font-size: 16px; font-family: "Prompt", sans-serif; }
   .tile .tile-desc { font-size: 13px; opacity: 0.85; line-height: 1.4; }
-  .tile.tile-green { background: #FCE4ED; color: #8F1345; }
-  .tile.tile-blue { background: #FFF3D6; color: #8F6100; }
-  .tile.tile-orange { background: #FDECDD; color: #9A4A0E; }
-  .tile.tile-purple { background: #F3E7DB; color: #5E3F26; }
-  .tile.tile-teal { background: #FDE7DF; color: #A83D1D; }
+  .tile.tile-green { background: #DCFCE7; color: #166534; }
+  .tile.tile-blue { background: #CCFBF1; color: #115E59; }
+  .tile.tile-orange { background: #ECFCCB; color: #3F6212; }
+  .tile.tile-purple { background: #E3EFE1; color: #3F6B4A; }
+  .tile.tile-teal { background: #D9E9DD; color: #24513A; }
   .tile.active { border-color: currentColor; }
   .tile-row {
     display: grid;
@@ -658,10 +658,10 @@ function AdminCalendarPage() {
           {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}
         </p>
         <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>
-          📎เอกสาร {matCount} ไฟล์
+          เอกสาร {matCount} ไฟล์
         </span>
         <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>
-          📑ข้อสอบ {examCount} ชุด
+          ข้อสอบ {examCount} ชุด
         </span>
 
         <h3 style={{ marginTop: 24 }}>คะแนนพนักงาน</h3>
@@ -703,14 +703,14 @@ function AdminCalendarPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>📅ปฏิทินอบรม ปี {year}</h2>
+        <h2>ปฏิทินอบรม ปี {year}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button
             className="refresh-btn"
             onClick={handleBackup}
             disabled={backupStatus === "loading"}
           >
-            {backupStatus === "loading" ? "⏳ กำลัง Backup..." : "📥Export/Backup"}
+            {backupStatus === "loading" ? "⏳ กำลัง Backup..." : "📦 Export/Backup"}
           </button>
           <button className="refresh-btn" onClick={loadAll}>🔄 รีเฟรช</button>
         </div>
@@ -1298,7 +1298,7 @@ function AnnualPlannerPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>📜แผนอบรมประจำปี {year}</h2>
+        <h2>แผนอบรมประจำปี {year}</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
           <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
@@ -1587,7 +1587,7 @@ function DashboardPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>📉Dashboard ภาพรวมปี {year}</h2>
+        <h2>Dashboard ภาพรวมปี {year}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
           <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
@@ -1611,7 +1611,7 @@ function DashboardPage() {
       </div>
 
       {/* อัตราผ่านรายเดือน */}
-      <h3 style={{ marginTop: 24 }}>อัตราสอบผ่านรายเดือน (ทั้งแผนก)</h3>
+      <h3 style={{ marginTop: 24 }}>อัตราสอบผ่านรายเดือน (ทั้งบริษัท)</h3>
       {totalAttempts === 0 ? (
         <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีข้อมูลข้อสอบในปีนี้</p>
       ) : (
