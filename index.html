@@ -658,10 +658,10 @@ function AdminCalendarPage() {
           {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}
         </p>
         <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>
-          เอกสาร {matCount} ไฟล์
+          📎เอกสาร {matCount} ไฟล์
         </span>
         <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>
-          ข้อสอบ {examCount} ชุด
+          📑ข้อสอบ {examCount} ชุด
         </span>
 
         <h3 style={{ marginTop: 24 }}>คะแนนพนักงาน</h3>
@@ -703,14 +703,14 @@ function AdminCalendarPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>ปฏิทินอบรม ปี {year}</h2>
+        <h2>📅ปฏิทินอบรม ปี {year}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button
             className="refresh-btn"
             onClick={handleBackup}
             disabled={backupStatus === "loading"}
           >
-            {backupStatus === "loading" ? "⏳ กำลัง Backup..." : "📦 Export/Backup"}
+            {backupStatus === "loading" ? "⏳ กำลัง Backup..." : "📥Export/Backup"}
           </button>
           <button className="refresh-btn" onClick={loadAll}>🔄 รีเฟรช</button>
         </div>
@@ -1298,7 +1298,7 @@ function AnnualPlannerPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>แผนอบรมประจำปี {year}</h2>
+        <h2>📜แผนอบรมประจำปี {year}</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
           <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
@@ -1587,7 +1587,7 @@ function DashboardPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>Dashboard ภาพรวมปี {year}</h2>
+        <h2>📉Dashboard ภาพรวมปี {year}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
           <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
@@ -1611,7 +1611,7 @@ function DashboardPage() {
       </div>
 
       {/* อัตราผ่านรายเดือน */}
-      <h3 style={{ marginTop: 24 }}>อัตราสอบผ่านรายเดือน (ทั้งบริษัท)</h3>
+      <h3 style={{ marginTop: 24 }}>อัตราสอบผ่านรายเดือน (ทั้งแผนก)</h3>
       {totalAttempts === 0 ? (
         <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีข้อมูลข้อสอบในปีนี้</p>
       ) : (
