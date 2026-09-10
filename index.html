@@ -414,6 +414,30 @@
       box-shadow: 4px 0 24px rgba(0,0,0,0.15);
     }
   }
+
+  /* ---- แบบฟอร์มพิมพ์ (ใบบันทึกผลอบรม) ---- */
+  .print-form { display: none; }
+  .print-form-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .print-form-table th, .print-form-table td {
+    border: 1px solid #000;
+    padding: 6px 8px;
+    font-size: 12px;
+    text-align: center;
+  }
+  .print-form-table th { background: #f0f0f0; }
+  .print-form-table td.name-cell { text-align: left; }
+  @media print {
+    body * { visibility: hidden; }
+    .print-form, .print-form * { visibility: visible; }
+    .print-form {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+    }
+    .no-print { display: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -545,6 +569,9 @@ function AdminCalendarPage() {
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [completionRows, setCompletionRows] = useState([]);
+  const [scoresByEmployee, setScoresByEmployee] = useState({});
+  const [allEmployees, setAllEmployees] = useState([]);
+  const [showPrintForm, setShowPrintForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [backupStatus, setBackupStatus] = useState(""); // "", "loading", "success", "error"
   const [backupMessage, setBackupMessage] = useState("");
@@ -625,12 +652,45 @@ function AdminCalendarPage() {
 
   const openEntry = async (entry) => {
     setSelectedEntry(entry);
-    const { data } = await supabaseClient
-      .from("v_course_completion")
-      .select("employee_name, employee_code, total_exams, passed_exams, completed")
-      .eq("calendar_id", entry.id)
-      .order("employee_name");
-    setCompletionRows(data || []);
+    const [compRes, examRes, empRes] = await Promise.all([
+      supabaseClient
+        .from("v_course_completion")
+        .select("employee_id, employee_name, employee_code, total_exams, passed_exams, completed")
+        .eq("calendar_id", entry.id)
+        .order("employee_name"),
+      supabaseClient
+        .from("exams")
+        .select("id")
+        .eq("course_id", entry.course_id),
+      supabaseClient
+        .from("employees")
+        .select("id, employee_code, name, role")
+        .eq("active", true)
+        .order("name"),
+    ]);
+    setCompletionRows(compRes.data || []);
+    setAllEmployees(empRes.data || []);
+
+    const examIds = (examRes.data || []).map((e) => e.id);
+    if (examIds.length === 0) {
+      setScoresByEmployee({});
+      return;
+    }
+    const { data: attempts } = await supabaseClient
+      .from("exam_attempts")
+      .select("employee_id, exam_id, raw_score, max_score, attempt_no")
+      .in("exam_id", examIds);
+
+    // เก็บเฉพาะ "ครั้งล่าสุด" ต่อคน ต่อข้อสอบ (attempt_no มากสุด = ล่าสุด)
+    const latestMap = {};
+    (attempts || []).forEach((a) => {
+      if (!latestMap[a.employee_id]) latestMap[a.employee_id] = {};
+      const cur = latestMap[a.employee_id][a.exam_id];
+      if (!cur || (a.attempt_no || 0) > (cur.attempt_no || 0)) {
+        latestMap[a.employee_id][a.exam_id] = a;
+      }
+    });
+    setScoresByEmployee(latestMap);
   };
 
   if (loading) return <div className="page">กำลังโหลดปฏิทิน...</div>;
@@ -641,56 +701,150 @@ function AdminCalendarPage() {
   if (selectedEntry) {
     const matCount = materialsByCourse[selectedEntry.course_id] || 0;
     const examCount = examsByCourse[selectedEntry.course_id] || 0;
+
+    const courseFullName = selectedEntry.courses ? selectedEntry.courses.name : "";
+    const firstSpace = courseFullName.indexOf(" ");
+    const courseCode = firstSpace > -1 ? courseFullName.slice(0, firstSpace) : courseFullName;
+    const courseDesc = firstSpace > -1 ? courseFullName.slice(firstSpace + 1) : "";
+
+    const completionByEmpId = {};
+    completionRows.forEach((r) => { completionByEmpId[r.employee_id] = r; });
+    const roster = allEmployees.map((emp) => {
+      const comp = completionByEmpId[emp.id];
+      const scores = scoresByEmployee[emp.id] || {};
+      const scoreList = Object.values(scores);
+      const scoreText = scoreList.length === 0 ? "-" : scoreList.map((s) => s.raw_score + "/" + s.max_score).join(", ");
+      return {
+        code: emp.employee_code,
+        name: emp.name,
+        role: emp.role,
+        scoreText,
+        passed: comp ? comp.completed : false,
+      };
+    });
+
     return (
       <div className="page">
-        <div className="header-row">
+        <div className="header-row no-print">
           <button className="secondary" onClick={() => setSelectedEntry(null)}>
             ← กลับไปปฏิทิน
           </button>
-          <button className="refresh-btn" onClick={() => openEntry(selectedEntry)}>
-            🔄 รีเฟรช
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="refresh-btn" onClick={() => window.print()}>
+              🖨️ พิมพ์ PDF
+            </button>
+            <button className="refresh-btn" onClick={() => openEntry(selectedEntry)}>
+              🔄 รีเฟรช
+            </button>
+          </div>
         </div>
-        <h2 style={{ marginTop: 16 }}>
-          {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
-        </h2>
-        <p>
-          {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}
-        </p>
-        <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>
-          📎เอกสาร {matCount} ไฟล์
-        </span>
-        <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>
-          📑ข้อสอบ {examCount} ชุด
-        </span>
+        <div className="no-print">
+          <h2 style={{ marginTop: 16 }}>
+            {selectedEntry.courses ? selectedEntry.courses.name : "หลักสูตร"}
+          </h2>
+          <p>
+            {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}
+          </p>
+          <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>
+            เอกสาร {matCount} ไฟล์
+          </span>
+          <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>
+            ข้อสอบ {examCount} ชุด
+          </span>
 
-        <h3 style={{ marginTop: 24 }}>คะแนนพนักงาน</h3>
-        {completionRows.length === 0 ? (
-          <p style={{ color: "#667085" }}>ยังไม่มีใครทำข้อสอบในรอบนี้</p>
-        ) : (
-          <table>
+          <h3 style={{ marginTop: 24 }}>คะแนนพนักงาน</h3>
+          {completionRows.length === 0 ? (
+            <p style={{ color: "#667085" }}>ยังไม่มีใครทำข้อสอบในรอบนี้</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>รหัส</th>
+                  <th>ชื่อ</th>
+                  <th>คะแนน</th>
+                  <th>ผ่าน/ทั้งหมด</th>
+                  <th>สถานะ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {completionRows.map((r, i) => {
+                  const scores = scoresByEmployee[r.employee_id] || {};
+                  const scoreList = Object.values(scores);
+                  return (
+                    <tr key={i}>
+                      <td>{r.employee_code}</td>
+                      <td>{r.employee_name}</td>
+                      <td>
+                        {scoreList.length === 0 ? (
+                          <span style={{ color: "var(--ink-soft)" }}>ยังไม่สอบ</span>
+                        ) : (
+                          scoreList.map((s, j) => (
+                            <div key={j}>{s.raw_score} / {s.max_score}</div>
+                          ))
+                        )}
+                      </td>
+                      <td>{r.passed_exams} / {r.total_exams}</td>
+                      <td className={r.completed ? "pass" : "fail"}>
+                        {r.completed ? "ผ่านครบ" : "ยังไม่ผ่าน"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* ---- แบบฟอร์มสำหรับพิมพ์เท่านั้น (ซ่อนไว้บนจอ โผล่เฉพาะตอนสั่งพิมพ์) ---- */}
+        <div className="print-form">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>SUNFOOD INTERNATIONAL</div>
+              <div style={{ fontSize: 12 }}>ใบบันทึกผลการอบรมและทดสอบ</div>
+            </div>
+            <div style={{ fontSize: 10, textAlign: "right" }}>
+              พิมพ์เมื่อ {new Date().toLocaleDateString("th-TH")}
+            </div>
+          </div>
+          <table style={{ width: "100%", marginTop: 10, fontSize: 12 }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: "2px 0" }}><b>รหัสหลักสูตร:</b> {courseCode}</td>
+                <td style={{ padding: "2px 0" }}><b>เดือน/ปีที่อบรม:</b> {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}</td>
+              </tr>
+              <tr>
+                <td colSpan={2} style={{ padding: "2px 0" }}><b>ชื่อหลักสูตร:</b> {courseDesc || courseFullName}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table className="print-form-table">
             <thead>
               <tr>
-                <th>รหัส</th>
-                <th>ชื่อ</th>
-                <th>ผ่าน/ทั้งหมด</th>
-                <th>สถานะ</th>
+                <th style={{ width: 32 }}>ลำดับ</th>
+                <th style={{ width: 70 }}>รหัส</th>
+                <th>ชื่อ-สกุล</th>
+                <th style={{ width: 80 }}>ตำแหน่ง</th>
+                <th style={{ width: 70 }}>คะแนน</th>
+                <th style={{ width: 40 }}>ผ่าน</th>
+                <th style={{ width: 80 }}>ลายเซ็น</th>
               </tr>
             </thead>
             <tbody>
-              {completionRows.map((r, i) => (
+              {roster.map((r, i) => (
                 <tr key={i}>
-                  <td>{r.employee_code}</td>
-                  <td>{r.employee_name}</td>
-                  <td>{r.passed_exams} / {r.total_exams}</td>
-                  <td className={r.completed ? "pass" : "fail"}>
-                    {r.completed ? "ผ่านครบ" : "ยังไม่ผ่าน"}
-                  </td>
+                  <td>{i + 1}</td>
+                  <td>{r.code}</td>
+                  <td className="name-cell">{r.name}</td>
+                  <td>{r.role}</td>
+                  <td>{r.scoreText}</td>
+                  <td>{r.passed ? "✓" : ""}</td>
+                  <td></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
     );
   }
@@ -703,14 +857,14 @@ function AdminCalendarPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>📅ปฏิทินอบรม ปี {year}</h2>
+        <h2>ปฏิทินอบรม ปี {year}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button
             className="refresh-btn"
             onClick={handleBackup}
             disabled={backupStatus === "loading"}
           >
-            {backupStatus === "loading" ? "⏳ กำลัง Backup..." : "📥 Export/Backup"}
+            {backupStatus === "loading" ? "⏳ กำลัง Backup..." : "📦 Export/Backup"}
           </button>
           <button className="refresh-btn" onClick={loadAll}>🔄 รีเฟรช</button>
         </div>
@@ -1298,7 +1452,7 @@ function AnnualPlannerPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>📜แผนอบรมประจำปี {year}</h2>
+        <h2>แผนอบรมประจำปี {year}</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
           <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
@@ -1587,7 +1741,7 @@ function DashboardPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>📉Dashboard ภาพรวมปี {year}</h2>
+        <h2>Dashboard ภาพรวมปี {year}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
           <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
@@ -1793,6 +1947,26 @@ function ForemanPage({ session }) {
     }
   };
 
+  const handleDeleteSession = async (sess, e) => {
+    if (e) e.stopPropagation(); // กันไม่ให้ trigger openSession ตอนกดปุ่มลบ
+    if (
+      !window.confirm(
+        "ลบ session วันที่ " + sess.session_date + " กะ " + (sess.shift || "-") +
+        " ออกทั้งหมดหรือไม่? (ข้อมูลการเข้าอบรมที่มาร์คไว้ในนี้จะหายไปด้วย)"
+      )
+    ) {
+      return;
+    }
+    // ลบ session_attendance ที่ผูกอยู่ก่อน กันปัญหา foreign key
+    await supabaseClient.from("session_attendance").delete().eq("session_id", sess.id);
+    const { error } = await supabaseClient.from("training_sessions").delete().eq("id", sess.id);
+    if (error) {
+      alert("ลบไม่สำเร็จ: " + error.message);
+      return;
+    }
+    if (selectedEntry) openEntry(selectedEntry); // รีเฟรชรายการ session
+  };
+
   const toggleStatus = (empId) => {
     setAttendance((prev) => ({
       ...prev,
@@ -1964,6 +2138,14 @@ function ForemanPage({ session }) {
               <div style={{ fontWeight: 600, marginBottom: 4 }}>{s.session_date}</div>
               <span className="badge ok">กะ {s.shift || "-"}</span>
             </div>
+            <button
+              className="secondary"
+              onClick={(e) => handleDeleteSession(s, e)}
+              style={{ flexShrink: 0, padding: "8px 10px" }}
+              title="ลบ session นี้"
+            >
+              <i className="ti ti-trash" aria-hidden="true" style={{ color: "var(--danger)" }}></i>
+            </button>
             <i className="ti ti-chevron-right" style={{ color: "var(--ink-soft)", fontSize: 18, flexShrink: 0 }} aria-hidden="true"></i>
           </div>
         ))}
@@ -1981,7 +2163,7 @@ function ForemanPage({ session }) {
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          <button onClick={createSession}>สร้าง + เช็คชื่อ</button>
+          <button onClick={createSession}>สร้าง + เริ่มมาร์ค</button>
         </div>
       </div>
     );
@@ -2266,7 +2448,7 @@ function EmployeePage({ session }) {
 
 // ---- หน้ารวม แยกตาม role ----
 // ---- หน้าหลัก: ต้อนรับ + ทางลัดไปหน้าอื่น ----
-function HomePage({ role, navItems, onNavigate }) {
+function HomePage({ role, navItems, onNavigate, myName }) {
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? "สวัสดีตอนเช้า" : hour < 18 ? "สวัสดีตอนบ่าย" : "สวัสดีตอนเย็น";
@@ -2281,7 +2463,7 @@ function HomePage({ role, navItems, onNavigate }) {
   return (
     <div className="page">
       <div className="nav-section" style={{ padding: 20 }}>
-        <h2 style={{ margin: 0 }}>{greeting} 👋</h2>
+        <h2 style={{ margin: 0 }}>{greeting}{myName ? " " + myName : ""} 👋</h2>
         <p style={{ color: "var(--ink-soft)", marginTop: 6, marginBottom: 0 }}>
           ยินดีต้อนรับสู่ระบบข้อสอบ QPT เลือกเมนูที่ต้องการทำต่อได้จากด้านล่าง
         </p>
@@ -2323,9 +2505,22 @@ function HomePage({ role, navItems, onNavigate }) {
 
 // ---- หน้ารวม แยกตาม role: โครง Sidebar (จอกว้าง) / เมนูเลื่อน (จอแคบ) ----
 function Dashboard({ session, role, onLogout }) {
-  const roleLabel = { admin: "แอดมิน (เจ้าหน้าที่)", foreman: "Foreman", employee: "พนักงาน" }[role] || role;
+  const roleShortLabel = { admin: "Admin", foreman: "Foreman", employee: "Employee" }[role] || role;
   const [view, setView] = useState("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [myName, setMyName] = useState("");
+
+  useEffect(() => {
+    const code = session.user.email.split("@")[0];
+    supabaseClient
+      .from("employees")
+      .select("name")
+      .eq("employee_code", code)
+      .single()
+      .then(({ data }) => {
+        if (data) setMyName(data.name);
+      });
+  }, []);
 
   const navItemsByRole = {
     admin: [
@@ -2353,7 +2548,7 @@ function Dashboard({ session, role, onLogout }) {
   };
 
   const renderContent = () => {
-    if (view === "home") return <HomePage role={role} navItems={navItems} onNavigate={goTo} />;
+    if (view === "home") return <HomePage role={role} navItems={navItems} onNavigate={goTo} myName={myName} />;
     if (role === "admin") {
       if (view === "scores") return <AdminCalendarPage />;
       if (view === "planner") return <AnnualPlannerPage />;
@@ -2399,7 +2594,9 @@ function Dashboard({ session, role, onLogout }) {
             <button className="hamburger-btn" onClick={() => setDrawerOpen(true)}>
               <i className="ti ti-menu-2" aria-hidden="true"></i>
             </button>
-            <span className="role-badge" style={{ marginBottom: 0 }}>{roleLabel}</span>
+            <span className="role-badge" style={{ marginBottom: 0 }}>
+              {myName ? myName + " (" + roleShortLabel + ")" : roleShortLabel}
+            </span>
           </div>
           <div className="content-topbar-right">
             <button className="logout-btn" onClick={onLogout}>
