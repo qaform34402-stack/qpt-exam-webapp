@@ -593,6 +593,7 @@ function AdminCalendarPage() {
   const [printShift, setPrintShift] = useState("");
   const [printSessionInfo, setPrintSessionInfo] = useState(null); // {session_date, foreman_name, startTime, endTime}
   const [examCriteria, setExamCriteria] = useState([]); // [{exam_name, max_score, threshold}]
+  const [examNameMap, setExamNameMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [backupStatus, setBackupStatus] = useState(""); // "", "loading", "success", "error"
   const [backupMessage, setBackupMessage] = useState("");
@@ -704,6 +705,7 @@ function AdminCalendarPage() {
     const examIds = (examRes.data || []).map((e) => e.id);
     const examNameById = {};
     (examRes.data || []).forEach((e) => { examNameById[e.id] = e.exam_name; });
+    setExamNameMap(examNameById);
 
     if (examIds.length === 0) {
       setScoresByEmployee({});
@@ -817,8 +819,15 @@ function AdminCalendarPage() {
     const roster = allEmployees.map((emp) => {
       const comp = completionByEmpId[emp.id];
       const scores = scoresByEmployee[emp.id] || {};
-      const scoreList = Object.values(scores);
-      const scoreText = scoreList.length === 0 ? "-" : scoreList.map((s) => s.raw_score + "/" + s.max_score).join(", ");
+      const scoreEntries = Object.entries(scores);
+      const scoreText = scoreEntries.length === 0
+        ? "-"
+        : scoreEntries
+            .map(([examId, s]) => {
+              const label = examNameMap[examId] ? examNameMap[examId].split(" ")[0] + ": " : "";
+              return label + s.raw_score + "/" + s.max_score;
+            })
+            .join(", ");
       return {
         code: emp.employee_code,
         name: emp.name,
@@ -890,17 +899,22 @@ function AdminCalendarPage() {
               <tbody>
                 {completionRows.map((r, i) => {
                   const scores = scoresByEmployee[r.employee_id] || {};
-                  const scoreList = Object.values(scores);
+                  const scoreEntries = Object.entries(scores);
                   return (
                     <tr key={i}>
                       <td>{r.employee_code}</td>
                       <td>{r.employee_name}</td>
                       <td>
-                        {scoreList.length === 0 ? (
+                        {scoreEntries.length === 0 ? (
                           <span style={{ color: "var(--ink-soft)" }}>ยังไม่สอบ</span>
                         ) : (
-                          scoreList.map((s, j) => (
-                            <div key={j}>{s.raw_score} / {s.max_score}</div>
+                          scoreEntries.map(([examId, s], j) => (
+                            <div key={j}>
+                              {examNameMap[examId] ? (
+                                <span style={{ color: "var(--ink-soft)" }}>{examNameMap[examId]}: </span>
+                              ) : null}
+                              {s.raw_score} / {s.max_score}
+                            </div>
                           ))
                         )}
                       </td>
@@ -1109,6 +1123,7 @@ function AnnualPlannerPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState("all"); // all | unplanned | no_materials | no_exam
+  const [showHidden, setShowHidden] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newCourseId, setNewCourseId] = useState("");
   const [isNewCourse, setIsNewCourse] = useState(false);
@@ -1142,7 +1157,7 @@ function AnnualPlannerPage() {
     setLoading(true);
     setSaveError("");
     const [courseRes, calRes, matRes, examRes] = await Promise.all([
-      supabaseClient.from("courses").select("id, name").order("name"),
+      supabaseClient.from("courses").select("id, name, hide_from_unplanned").order("name"),
       supabaseClient
         .from("training_calendar")
         .select("id, year, month, course_id, courses(name)")
@@ -1171,7 +1186,9 @@ function AnnualPlannerPage() {
   };
 
   const plannedCourseIds = new Set(calendarRows.map((r) => r.course_id));
-  const unplannedCourses = courses.filter((c) => !plannedCourseIds.has(c.id));
+  const unplannedCoursesAll = courses.filter((c) => !plannedCourseIds.has(c.id));
+  const unplannedCourses = unplannedCoursesAll.filter((c) => !c.hide_from_unplanned);
+  const hiddenUnplannedCourses = unplannedCoursesAll.filter((c) => c.hide_from_unplanned);
 
   const totalCourses = courses.length;
   const plannedCount = plannedCourseIds.size;
@@ -1182,6 +1199,18 @@ function AnnualPlannerPage() {
 
   const matchesSearch = (name) =>
     !searchQuery.trim() || (name || "").toLowerCase().includes(searchQuery.trim().toLowerCase());
+
+  const unhideCourse = async (course) => {
+    const { error } = await supabaseClient
+      .from("courses")
+      .update({ hide_from_unplanned: false })
+      .eq("id", course.id);
+    if (error) {
+      setSaveError("เลิกซ่อนไม่สำเร็จ: " + error.message);
+      return;
+    }
+    loadAll();
+  };
 
   const handleAddPlan = async () => {
     if (!newMonth) {
@@ -1212,19 +1241,29 @@ function AnnualPlannerPage() {
       return;
     }
 
-    const { error } = await supabaseClient
+    const { data: newEntry, error } = await supabaseClient
       .from("training_calendar")
-      .insert({ course_id: courseIdToUse, year, month: newMonth });
+      .insert({ course_id: courseIdToUse, year, month: newMonth })
+      .select("id, year, month, course_id")
+      .single();
     if (error) {
       setSaveError("เพิ่มแผนไม่สำเร็จ: " + error.message);
       return;
     }
+    const wasNewCourse = isNewCourse;
+    const newCourseNameUsed = newCourseName.trim();
     setShowAddForm(false);
     setNewCourseId("");
     setIsNewCourse(false);
     setNewCourseName("");
     setNewMonth(1);
-    loadAll();
+    await loadAll();
+
+    if (wasNewCourse) {
+      // หลักสูตรใหม่: เปิดหน้าจัดการเอกสาร/ข้อสอบให้ทันที เผื่ออยากใส่เลย
+      // (ถ้ายังไม่พร้อม กด "← กลับไปแผนอบรม" แล้วมาใส่ทีหลังได้ตามปกติ)
+      openPlanDetail({ ...newEntry, courses: { name: newCourseNameUsed } });
+    }
   };
 
   const startEdit = (entry) => {
@@ -1247,7 +1286,12 @@ function AnnualPlannerPage() {
   };
 
   const handleDelete = async (entry) => {
-    if (!window.confirm("ลบแผนอบรม \"" + (entry.courses ? entry.courses.name : "") + "\" เดือน " + MONTH_NAMES[entry.month] + " ออกจากปฏิทินหรือไม่?")) {
+    if (
+      !window.confirm(
+        "ลบแผนอบรม \"" + (entry.courses ? entry.courses.name : "") + "\" เดือน " + MONTH_NAMES[entry.month] +
+        " ออกจากปฏิทินหรือไม่?\n\n(หลักสูตรนี้จะไม่โผล่ในรายการ \"ยังไม่ได้วางแผน\" อีก จนกว่าจะกด \"เลิกซ่อน\" เอง)"
+      )
+    ) {
       return;
     }
     const { error } = await supabaseClient.from("training_calendar").delete().eq("id", entry.id);
@@ -1255,6 +1299,11 @@ function AnnualPlannerPage() {
       setSaveError("ลบไม่สำเร็จ: " + error.message + " (อาจมีข้อมูล session/ผลสอบผูกอยู่กับแผนนี้แล้ว)");
       return;
     }
+    // ซ่อนหลักสูตรนี้จากรายการ "ยังไม่ได้วางแผน" ถาวร กันไม่ให้กลับมาโผล่แล้วสับสน
+    await supabaseClient
+      .from("courses")
+      .update({ hide_from_unplanned: true })
+      .eq("id", entry.course_id);
     loadAll();
   };
 
@@ -1708,26 +1757,47 @@ function AnnualPlannerPage() {
       {saveError && <p className="error">{saveError}</p>}
 
       {filterMode === "unplanned" ? (
-        visibleUnplanned.length === 0 ? (
-          <p style={{ color: "#667085" }}>ไม่มีหลักสูตรที่ยังไม่ได้วางแผน 🎉</p>
-        ) : (
-          visibleUnplanned.map((c) => (
-            <div className="course-card" style={{ cursor: "default" }} key={c.id}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 600 }}>{c.name}</span>
-                <button
-                  className="secondary"
-                  onClick={() => {
-                    setNewCourseId(c.id);
-                    setShowAddForm(true);
-                  }}
-                >
-                  + วางแผน
-                </button>
+        <>
+          {visibleUnplanned.length === 0 ? (
+            <p style={{ color: "#667085" }}>ไม่มีหลักสูตรที่ยังไม่ได้วางแผน 🎉</p>
+          ) : (
+            visibleUnplanned.map((c) => (
+              <div className="course-card" style={{ cursor: "default" }} key={c.id}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 600 }}>{c.name}</span>
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      setNewCourseId(c.id);
+                      setShowAddForm(true);
+                    }}
+                  >
+                    + วางแผน
+                  </button>
+                </div>
               </div>
+            ))
+          )}
+
+          {hiddenUnplannedCourses.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <button className="secondary" onClick={() => setShowHidden(!showHidden)}>
+                {showHidden ? "ซ่อนรายการที่ซ่อนไว้" : "แสดงหลักสูตรที่ซ่อนไว้ (" + hiddenUnplannedCourses.length + ")"}
+              </button>
+              {showHidden &&
+                hiddenUnplannedCourses.map((c) => (
+                  <div className="course-card" style={{ cursor: "default", opacity: 0.7 }} key={c.id}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontWeight: 600 }}>{c.name}</span>
+                      <button className="secondary" onClick={() => unhideCourse(c)}>
+                        เลิกซ่อน
+                      </button>
+                    </div>
+                  </div>
+                ))}
             </div>
-          ))
-        )
+          )}
+        </>
       ) : (
         MONTH_NAMES.slice(1).map((monthName, idx) => {
           const m = idx + 1;
