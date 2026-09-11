@@ -823,10 +823,7 @@ function AdminCalendarPage() {
       const scoreText = scoreEntries.length === 0
         ? "-"
         : scoreEntries
-            .map(([examId, s]) => {
-              const label = examNameMap[examId] ? examNameMap[examId].split(" ")[0] + ": " : "";
-              return label + s.raw_score + "/" + s.max_score;
-            })
+            .map(([examId, s]) => s.raw_score + "/" + s.max_score)
             .join(", ");
       return {
         code: emp.employee_code,
@@ -978,7 +975,12 @@ function AdminCalendarPage() {
               </tr>
               <tr>
                 <td colSpan={2} style={{ padding: "6px 0 2px" }}>
-                  OJT/แก้ไข Car/PAR เลขที่ ________________ /HRMS ________________ (เจ้าหน้าที่ HRD)
+                  OJT เลขที่ ________________
+                </td>
+              </tr>
+              <tr>
+                <td colSpan={2} style={{ padding: "2px 0" }}>
+                  แก้ไข Car/PAR เลขที่ ________________ /HRMS ________________ (เจ้าหน้าที่ HRD)
                 </td>
               </tr>
             </tbody>
