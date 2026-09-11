@@ -850,7 +850,16 @@ function AdminCalendarPage() {
             )}
             <button
               className="refresh-btn"
-              onClick={() => window.print()}
+              onClick={() => {
+                const originalTitle = document.title;
+                document.title = "";
+                const restore = () => {
+                  document.title = originalTitle;
+                  window.removeEventListener("afterprint", restore);
+                };
+                window.addEventListener("afterprint", restore);
+                window.print();
+              }}
               disabled={availableShifts.length > 0 && !printSessionInfo}
             >
               🖨️ พิมพ์ PDF
@@ -994,7 +1003,7 @@ function AdminCalendarPage() {
                 <th style={{ width: 32 }}>ลำดับ</th>
                 <th style={{ width: 70 }}>รหัส</th>
                 <th>ชื่อ-สกุล</th>
-                <th style={{ width: 80 }}>ตำแหน่ง</th>
+                <th style={{ width: 80 }}>แผนก/ส่วนงาน</th>
                 <th style={{ width: 70 }}>คะแนน</th>
                 <th style={{ width: 40 }}>ผ่าน</th>
                 <th style={{ width: 80 }}>ลายเซ็น</th>
@@ -1006,10 +1015,10 @@ function AdminCalendarPage() {
                   <td>{i + 1}</td>
                   <td>{r.code}</td>
                   <td className="name-cell">{r.name}</td>
-                  <td>{r.role}</td>
+                  <td>QPT/QA</td>
                   <td>{r.scoreText}</td>
                   <td>{r.passed ? "✓" : ""}</td>
-                  <td></td>
+                  <td>{r.name ? r.name.split(" ")[0] : ""}</td>
                 </tr>
               ))}
             </tbody>
