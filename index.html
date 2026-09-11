@@ -1123,7 +1123,6 @@ function AnnualPlannerPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState("all"); // all | unplanned | no_materials | no_exam
-  const [showHidden, setShowHidden] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newCourseId, setNewCourseId] = useState("");
   const [isNewCourse, setIsNewCourse] = useState(false);
@@ -1147,6 +1146,8 @@ function AnnualPlannerPage() {
   const [editingMaterialTitle, setEditingMaterialTitle] = useState("");
   const [editingMaterialUrl, setEditingMaterialUrl] = useState("");
   const [editingExamId, setEditingExamId] = useState(null);
+  const [newExamName, setNewExamName] = useState("");
+  const [newExamUrl, setNewExamUrl] = useState("");
   const [editingExamUrl, setEditingExamUrl] = useState("");
 
   useEffect(() => {
@@ -1188,7 +1189,6 @@ function AnnualPlannerPage() {
   const plannedCourseIds = new Set(calendarRows.map((r) => r.course_id));
   const unplannedCoursesAll = courses.filter((c) => !plannedCourseIds.has(c.id));
   const unplannedCourses = unplannedCoursesAll.filter((c) => !c.hide_from_unplanned);
-  const hiddenUnplannedCourses = unplannedCoursesAll.filter((c) => c.hide_from_unplanned);
 
   const totalCourses = courses.length;
   const plannedCount = plannedCourseIds.size;
@@ -1199,18 +1199,6 @@ function AnnualPlannerPage() {
 
   const matchesSearch = (name) =>
     !searchQuery.trim() || (name || "").toLowerCase().includes(searchQuery.trim().toLowerCase());
-
-  const unhideCourse = async (course) => {
-    const { error } = await supabaseClient
-      .from("courses")
-      .update({ hide_from_unplanned: false })
-      .eq("id", course.id);
-    if (error) {
-      setSaveError("เลิกซ่อนไม่สำเร็จ: " + error.message);
-      return;
-    }
-    loadAll();
-  };
 
   const handleAddPlan = async () => {
     if (!newMonth) {
@@ -1470,6 +1458,33 @@ function AnnualPlannerPage() {
     refreshPlanDetail();
   };
 
+  const addExam = async () => {
+    if (!newExamName.trim() || !newExamUrl.trim()) {
+      setDetailError("กรุณากรอกชื่อข้อสอบและลิงก์ Google Form ให้ครบ");
+      return;
+    }
+    const confirmed = window.confirm(
+      "⚠️ คำเตือนสำคัญ: หลังเพิ่มข้อสอบนี้แล้ว ต้องไปตั้งค่าปลายทางคำตอบของฟอร์มให้ไปที่ไฟล์คำตอบรวม " +
+      "แล้วรันฟังก์ชัน syncResponseTabNames() ใน Apps Script อีกครั้งด้วย ไม่งั้นผลสอบวิชานี้จะไม่ถูกบันทึกเข้าระบบเลย\n\n" +
+      "ยืนยันว่าจะเพิ่มข้อสอบนี้ใช่หรือไม่? (ทำขั้นตอน Apps Script ทีหลังได้)"
+    );
+    if (!confirmed) return;
+
+    const { error } = await supabaseClient.from("exams").insert({
+      course_id: selectedPlanEntry.course_id,
+      exam_name: newExamName.trim(),
+      exam_form_url: newExamUrl.trim(),
+    });
+    if (error) {
+      setDetailError("เพิ่มข้อสอบไม่สำเร็จ: " + error.message);
+      return;
+    }
+    setNewExamName("");
+    setNewExamUrl("");
+    refreshPlanDetail();
+    loadAll();
+  };
+
   if (loading) return <div className="page">กำลังโหลด...</div>;
 
   // ---- หน้ารายละเอียด: จัดการเอกสาร + ข้อสอบของหลักสูตรนี้ ----
@@ -1631,6 +1646,41 @@ function AnnualPlannerPage() {
                 )}
               </div>
             ))}
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: 16,
+                borderRadius: 14,
+                background: "var(--accent-bg)",
+                border: "1px dashed var(--accent)",
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 14, color: "var(--accent-dark)", marginBottom: 10 }}>
+                <i className="ti ti-circle-plus" aria-hidden="true" style={{ marginRight: 6 }}></i>
+                เพิ่มข้อสอบใหม่
+              </div>
+              <div className="new-session-row">
+                <input
+                  type="text"
+                  placeholder="ชื่อข้อสอบ"
+                  value={newExamName}
+                  onChange={(e) => setNewExamName(e.target.value)}
+                  style={{ flex: 1, minWidth: 160, margin: 0 }}
+                />
+                <input
+                  type="text"
+                  placeholder="ลิงก์ Google Form (URL เต็ม)"
+                  value={newExamUrl}
+                  onChange={(e) => setNewExamUrl(e.target.value)}
+                  style={{ flex: 2, minWidth: 220, margin: 0 }}
+                />
+                <button onClick={addExam}>+ เพิ่มข้อสอบ</button>
+              </div>
+              <p style={{ fontSize: 12, color: "var(--accent-dark)", marginTop: 8 }}>
+                หลังเพิ่มแล้ว ต้องไปตั้งค่าปลายทางคำตอบของฟอร์ม + รัน syncResponseTabNames() ใน Apps Script อีกครั้ง (ดูคำเตือนตอนกดยืนยัน)
+              </p>
+            </div>
           </>
         )}
       </div>
@@ -1777,25 +1827,6 @@ function AnnualPlannerPage() {
                 </div>
               </div>
             ))
-          )}
-
-          {hiddenUnplannedCourses.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <button className="secondary" onClick={() => setShowHidden(!showHidden)}>
-                {showHidden ? "ซ่อนรายการที่ซ่อนไว้" : "แสดงหลักสูตรที่ซ่อนไว้ (" + hiddenUnplannedCourses.length + ")"}
-              </button>
-              {showHidden &&
-                hiddenUnplannedCourses.map((c) => (
-                  <div className="course-card" style={{ cursor: "default", opacity: 0.7 }} key={c.id}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontWeight: 600 }}>{c.name}</span>
-                      <button className="secondary" onClick={() => unhideCourse(c)}>
-                        เลิกซ่อน
-                      </button>
-                    </div>
-                  </div>
-                ))}
-            </div>
           )}
         </>
       ) : (
