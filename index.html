@@ -516,11 +516,27 @@ function LoginPage({ onLogin }) {
       email: email,
       password: code.trim(),
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError("รหัสพนักงานไม่ถูกต้อง หรือยังไม่มีในระบบ");
       return;
     }
+
+    // เช็คสถานะ active ในตาราง employees - ถ้าถูกปิดใช้งานแล้ว (ลาออก) ห้ามเข้าระบบ
+    const { data: empData } = await supabaseClient
+      .from("employees")
+      .select("active")
+      .eq("employee_code", code.trim())
+      .single();
+
+    setLoading(false);
+
+    if (empData && empData.active === false) {
+      await supabaseClient.auth.signOut();
+      setError("บัญชีนี้ถูกปิดใช้งานแล้ว กรุณาติดต่อแอดมิน");
+      return;
+    }
+
     onLogin(data.session);
   };
 
@@ -1937,6 +1953,282 @@ function DashboardPage() {
   );
 }
 
+// ---- หน้าจัดการพนักงาน (แอดมิน) ----
+function EmployeeManagementPage() {
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterRole, setFilterRole] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("active");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  // ฟอร์มเพิ่มพนักงานใหม่
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newRole, setNewRole] = useState("employee");
+  const [newShift, setNewShift] = useState("");
+
+  // แก้ไขรายคน
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState("");
+  const [editShift, setEditShift] = useState("");
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
+  const loadEmployees = async () => {
+    setLoading(true);
+    const { data } = await supabaseClient
+      .from("employees")
+      .select("id, employee_code, name, role, shift, active")
+      .order("name");
+    setEmployees(data || []);
+    setLoading(false);
+  };
+
+  const handleAddEmployee = async () => {
+    if (!newCode.trim() || !newName.trim() || !newRole) {
+      setFormError("กรุณากรอกรหัสพนักงาน ชื่อ และเลือก role ให้ครบ");
+      return;
+    }
+    setFormError("");
+    setSaving(true);
+    try {
+      const res = await fetch(BACKUP_WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          secret: BACKUP_SECRET,
+          action: "create_employee",
+          employeeCode: newCode.trim(),
+          name: newName.trim(),
+          role: newRole,
+          shift: newShift.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setFormError(data.error || "เพิ่มพนักงานไม่สำเร็จ");
+        setSaving(false);
+        return;
+      }
+      setNewCode("");
+      setNewName("");
+      setNewRole("employee");
+      setNewShift("");
+      setShowAddForm(false);
+      setSaving(false);
+      loadEmployees();
+    } catch (err) {
+      setFormError("เพิ่มพนักงานไม่สำเร็จ: " + err.message);
+      setSaving(false);
+    }
+  };
+
+  const startEdit = (emp) => {
+    setEditingId(emp.id);
+    setEditName(emp.name || "");
+    setEditRole(emp.role || "employee");
+    setEditShift(emp.shift || "");
+  };
+
+  const saveEdit = async (emp) => {
+    const { error } = await supabaseClient
+      .from("employees")
+      .update({ name: editName.trim(), role: editRole, shift: editShift.trim() || null })
+      .eq("id", emp.id);
+    if (error) {
+      alert("แก้ไขไม่สำเร็จ: " + error.message);
+      return;
+    }
+    setEditingId(null);
+    loadEmployees();
+  };
+
+  const toggleActive = async (emp) => {
+    const newActive = !emp.active;
+    const confirmMsg = newActive
+      ? "เปิดใช้งานบัญชี " + emp.name + " อีกครั้งหรือไม่?"
+      : "ปิดใช้งานบัญชี " + emp.name + " หรือไม่? (คนนี้จะ login เข้าระบบไม่ได้อีกจนกว่าจะเปิดใช้งานคืน)";
+    if (!window.confirm(confirmMsg)) return;
+
+    const { error } = await supabaseClient
+      .from("employees")
+      .update({ active: newActive })
+      .eq("id", emp.id);
+    if (error) {
+      alert("เปลี่ยนสถานะไม่สำเร็จ: " + error.message);
+      return;
+    }
+    loadEmployees();
+  };
+
+  if (loading) return <div className="page">กำลังโหลด...</div>;
+
+  const roleLabel = { admin: "Admin", foreman: "Foreman", employee: "Employee" };
+  const filtered = employees.filter((e) => {
+    if (filterRole !== "all" && e.role !== filterRole) return false;
+    if (filterStatus === "active" && !e.active) return false;
+    if (filterStatus === "inactive" && e.active) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      if (!(e.name || "").toLowerCase().includes(q) && !(e.employee_code || "").includes(q)) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="page">
+      <div className="header-row">
+        <h2>จัดการพนักงาน</h2>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowAddForm(!showAddForm)}>+ เพิ่มพนักงานใหม่</button>
+          <button className="refresh-btn" onClick={loadEmployees}>🔄 รีเฟรช</button>
+        </div>
+      </div>
+
+      {showAddForm && (
+        <div className="course-card" style={{ cursor: "default", display: "block" }}>
+          <div className="new-session-row">
+            <input
+              type="text"
+              placeholder="รหัสพนักงาน"
+              value={newCode}
+              onChange={(e) => setNewCode(e.target.value)}
+              style={{ flex: 1, minWidth: 140 }}
+            />
+            <input
+              type="text"
+              placeholder="ชื่อ-สกุล"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              style={{ flex: 1, minWidth: 160 }}
+            />
+            <select value={newRole} onChange={(e) => setNewRole(e.target.value)}>
+              <option value="employee">Employee</option>
+              <option value="foreman">Foreman</option>
+              <option value="admin">Admin</option>
+            </select>
+            <input
+              type="text"
+              placeholder="กะ (ไม่บังคับ)"
+              value={newShift}
+              onChange={(e) => setNewShift(e.target.value)}
+              style={{ width: 120 }}
+            />
+          </div>
+          {formError && <p className="error">{formError}</p>}
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button onClick={handleAddEmployee} disabled={saving}>
+              {saving ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+            <button className="secondary" onClick={() => setShowAddForm(false)} disabled={saving}>
+              ยกเลิก
+            </button>
+          </div>
+          <p style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 8 }}>
+            ระบบจะสร้างบัญชี login ให้อัตโนมัติ (รหัสผ่าน = รหัสพนักงาน)
+          </p>
+        </div>
+      )}
+
+      <input
+        type="text"
+        placeholder="ค้นหาชื่อหรือรหัสพนักงาน..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+
+      <div className="month-tabs">
+        {[
+          { key: "all", label: "ทุก Role" },
+          { key: "admin", label: "Admin" },
+          { key: "foreman", label: "Foreman" },
+          { key: "employee", label: "Employee" },
+        ].map((f) => (
+          <div
+            key={f.key}
+            className={"month-tab" + (filterRole === f.key ? " active" : "")}
+            onClick={() => setFilterRole(f.key)}
+          >
+            {f.label}
+          </div>
+        ))}
+        <div
+          className={"month-tab" + (filterStatus === "active" ? " active" : "")}
+          onClick={() => setFilterStatus(filterStatus === "active" ? "all" : "active")}
+        >
+          ใช้งานอยู่
+        </div>
+        <div
+          className={"month-tab" + (filterStatus === "inactive" ? " active" : "")}
+          onClick={() => setFilterStatus(filterStatus === "inactive" ? "all" : "inactive")}
+        >
+          ปิดใช้งานแล้ว
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p style={{ color: "var(--ink-soft)" }}>ไม่พบพนักงานตามเงื่อนไขนี้</p>
+      ) : (
+        filtered.map((emp) => (
+          <div className="course-card" key={emp.id}>
+            <div className={"icon-circle " + (emp.active ? "ok" : "fail")}>
+              <i className={"ti " + (emp.active ? "ti-user-check" : "ti-user-off")} aria-hidden="true"></i>
+            </div>
+            {editingId === emp.id ? (
+              <div style={{ flex: 1, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  style={{ flex: 1, minWidth: 140, margin: 0 }}
+                />
+                <select value={editRole} onChange={(e) => setEditRole(e.target.value)}>
+                  <option value="employee">Employee</option>
+                  <option value="foreman">Foreman</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="กะ"
+                  value={editShift}
+                  onChange={(e) => setEditShift(e.target.value)}
+                  style={{ width: 100, margin: 0 }}
+                />
+                <button onClick={() => saveEdit(emp)}>บันทึก</button>
+                <button className="secondary" onClick={() => setEditingId(null)}>ยกเลิก</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                    {emp.name} <span style={{ color: "var(--ink-soft)", fontWeight: 400 }}>({emp.employee_code})</span>
+                  </div>
+                  <span className="badge ok">{roleLabel[emp.role] || emp.role}</span>
+                  {emp.shift && <span className="badge ok">กะ {emp.shift}</span>}
+                  {!emp.active && <span className="badge fail">ปิดใช้งานแล้ว</span>}
+                </div>
+                <ActionMenu
+                  items={[
+                    { label: "แก้ไขข้อมูล", icon: "ti-edit", onClick: () => startEdit(emp) },
+                    emp.active
+                      ? { label: "ปิดใช้งาน", icon: "ti-user-off", danger: true, onClick: () => toggleActive(emp) }
+                      : { label: "เปิดใช้งานคืน", icon: "ti-user-check", onClick: () => toggleActive(emp) },
+                  ]}
+                />
+              </>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 
 // ---- แถวมาร์คการเข้าอบรมของพนักงาน 1 คน ----
 function AttendanceRow({ emp, data, onToggle, onNote, onRemove }) {
@@ -2666,6 +2958,7 @@ function Dashboard({ session, role, onLogout }) {
       { key: "scores", label: "ดูคะแนน", icon: "ti-chart-bar", color: "orange", desc: "ผลสอบของพนักงานรายเดือน" },
       { key: "planner", label: "วางแผนรายปี", icon: "ti-calendar-event", color: "purple", desc: "จัดตารางอบรมทั้งปี" },
       { key: "dashboard", label: "Dashboard", icon: "ti-layout-dashboard", color: "teal", desc: "ภาพรวมอัตราผ่าน/เข้าอบรม" },
+      { key: "employees", label: "จัดการพนักงาน", icon: "ti-users", color: "blue", desc: "เพิ่ม/แก้ไข/ปิดใช้งานบัญชี" },
       { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue", desc: "ทำแบบทดสอบของตัวเอง" },
     ],
     foreman: [
@@ -2691,6 +2984,7 @@ function Dashboard({ session, role, onLogout }) {
       if (view === "scores") return <AdminCalendarPage />;
       if (view === "planner") return <AnnualPlannerPage />;
       if (view === "dashboard") return <DashboardPage />;
+      if (view === "employees") return <EmployeeManagementPage />;
       if (view === "exam") return <EmployeePage session={session} />;
     }
     if (role === "foreman") {
