@@ -2390,6 +2390,7 @@ function ForemanPage({ session }) {
   const [savingMsg, setSavingMsg] = useState("");
   const [newDate, setNewDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [newShift, setNewShift] = useState("");
+  const [courseMaterials, setCourseMaterials] = useState([]);
 
   useEffect(() => {
     loadInitial();
@@ -2428,12 +2429,19 @@ function ForemanPage({ session }) {
     setSelectedEntry(entry);
     setSelectedSession(null);
     setNewShift((me && me.shift) || shiftOptions[0] || "");
-    const { data } = await supabaseClient
-      .from("training_sessions")
-      .select("id, session_date, shift, foreman_id")
-      .eq("calendar_id", entry.id)
-      .order("session_date", { ascending: false });
-    setSessions(data || []);
+    const [sessRes, matRes] = await Promise.all([
+      supabaseClient
+        .from("training_sessions")
+        .select("id, session_date, shift, foreman_id")
+        .eq("calendar_id", entry.id)
+        .order("session_date", { ascending: false }),
+      supabaseClient
+        .from("course_materials")
+        .select("id, title, drive_url")
+        .eq("course_id", entry.course_id),
+    ]);
+    setSessions(sessRes.data || []);
+    setCourseMaterials(matRes.data || []);
   };
 
   const createSession = async () => {
@@ -2668,7 +2676,28 @@ function ForemanPage({ session }) {
           {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}
         </p>
 
-        <h3>Session ที่มีอยู่</h3>
+        <div className="section-title">
+          <i className="ti ti-folder" aria-hidden="true"></i>
+          เอกสารอบรม (เปิดให้พนักงานดูก่อนมาร์คได้เลย)
+        </div>
+        {courseMaterials.length === 0 ? (
+          <p style={{ color: "#667085" }}>ยังไม่มีเอกสารสำหรับหลักสูตรนี้</p>
+        ) : (
+          courseMaterials.map((m) => (
+            <div className="attendance-row" key={m.id}>
+              <div style={{ flex: 1 }}>
+                <div className="name">{m.title || "(ไม่มีชื่อ)"}</div>
+              </div>
+              <a href={m.drive_url} target="_blank" rel="noopener noreferrer">
+                <button className="secondary">
+                  <i className="ti ti-external-link" aria-hidden="true"></i> เปิดเอกสาร
+                </button>
+              </a>
+            </div>
+          ))
+        )}
+
+        <h3 style={{ marginTop: 24 }}>Session ที่มีอยู่</h3>
         {sessions.length === 0 && (
           <p style={{ color: "#667085" }}>ยังไม่มี session สำหรับหลักสูตรนี้</p>
         )}
