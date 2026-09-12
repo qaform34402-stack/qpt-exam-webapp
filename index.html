@@ -713,7 +713,7 @@ function AdminCalendarPage() {
     } else {
       const { data: attempts } = await supabaseClient
         .from("exam_attempts")
-        .select("employee_id, exam_id, raw_score, max_score, attempt_no")
+        .select("employee_id, exam_id, raw_score, max_score, attempt_no, passed")
         .in("exam_id", examIds);
 
       // เก็บเฉพาะ "ครั้งล่าสุด" ต่อคน ต่อข้อสอบ (attempt_no มากสุด = ล่าสุด)
@@ -814,10 +814,7 @@ function AdminCalendarPage() {
     const courseCode = firstSpace > -1 ? courseFullName.slice(0, firstSpace) : courseFullName;
     const courseDesc = firstSpace > -1 ? courseFullName.slice(firstSpace + 1) : "";
 
-    const completionByEmpId = {};
-    completionRows.forEach((r) => { completionByEmpId[r.employee_id] = r; });
     const roster = allEmployees.map((emp) => {
-      const comp = completionByEmpId[emp.id];
       const scores = scoresByEmployee[emp.id] || {};
       const scoreEntries = Object.entries(scores);
       const scoreText = scoreEntries.length === 0
@@ -825,12 +822,16 @@ function AdminCalendarPage() {
         : scoreEntries
             .map(([examId, s]) => s.raw_score + "/" + s.max_score)
             .join(", ");
+      // "ผ่าน" อ้างอิงจากคะแนน/ผลของข้อสอบที่โชว์อยู่ในแถวนี้โดยตรง (ต้องผ่านทุกชุดที่มี)
+      // ไม่ใช้สถานะ "ผ่านครบทั้งเดือน" จาก v_course_completion เพราะอาจไม่ตรงกับคะแนนที่เห็น
+      // (เช่น สอบข้ามเดือน หรือมีข้อสอบย่อยอื่นในคอร์สที่ยังไม่ผ่าน)
+      const passed = scoreEntries.length > 0 && scoreEntries.every(([, s]) => s.passed === true);
       return {
         code: emp.employee_code,
         name: emp.name,
         role: emp.role,
         scoreText,
-        passed: comp ? comp.completed : false,
+        passed,
       };
     });
 
@@ -1002,7 +1003,7 @@ function AdminCalendarPage() {
               <tr>
                 <th style={{ width: 32 }}>ลำดับ</th>
                 <th style={{ width: 70 }}>รหัส</th>
-                <th style={{ width: 120 }}>ชื่อ-สกุล</th>
+                <th>ชื่อ-สกุล</th>
                 <th style={{ width: 80 }}>แผนก/ส่วนงาน</th>
                 <th style={{ width: 70 }}>คะแนน</th>
                 <th style={{ width: 40 }}>ผ่าน</th>
