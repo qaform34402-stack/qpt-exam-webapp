@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8" />
-<title>QPT Learning&Examination</title>
+<title>ระบบข้อสอบ QPT</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,23 +15,23 @@
 <style>
   * { box-sizing: border-box; }
   :root {
-    --cream: #FFFFFF;
+    --cream: #FAF9F6;
     --surface: #FFFFFF;
-    --ink: #3B3A36;
+    --ink: #2B2B27;
     --ink-soft: #8C8878;
-    --line: #EFE7D6;
-    /* สีหลักของแบรนด์ (ปุ่ม, เมนูที่เลือกอยู่) - โทนเขียว */
-    --accent: #15803D;
-    --accent-dark: #14532D;
-    --accent-bg: #DCFCE7;
+    --line: #EDEBE4;
+    /* สีหลักของแบรนด์ (ปุ่ม, เมนูที่เลือกอยู่) - เขียวผสมเอง สดขึ้นกว่ารอบก่อน */
+    --accent: #24996B;
+    --accent-dark: #1A7551;
+    --accent-bg: #E1F5EC;
     /* สีความหมาย "ผ่าน/สำเร็จ" อยู่ในโทนเขียวเดียวกันอยู่แล้ว */
-    --success: #1B6B4A;
-    --success-dark: #145038;
-    --success-bg: #E4F5EC;
-    --warn: #B8590C;
-    --warn-bg: #FFF0E0;
-    --danger: #C1401F;
-    --danger-bg: #FDEDE7;
+    --success: #24996B;
+    --success-dark: #1A7551;
+    --success-bg: #E1F5EC;
+    --warn: #C2820F;
+    --warn-bg: #FBF0DC;
+    --danger: #C8523A;
+    --danger-bg: #FBE9E4;
   }
   /* กลุ่มสี tile สำหรับเมนูหลัก แต่ละอันมีสีเฉพาะตัวให้แยกแยะง่าย
      (ชื่อคลาสเป็นชื่อเดิมตั้งแต่เวอร์ชันก่อน แต่ปรับค่าสีจริงให้เลี่ยงเขียว/ม่วง/น้ำเงิน/ฟ้าแล้ว) */
@@ -40,32 +40,42 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
-    padding: 22px 20px;
-    border-radius: 16px;
+    padding: 20px 18px;
+    border-radius: 12px;
     cursor: pointer;
-    border: 2px solid transparent;
-    min-height: 130px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    min-height: 120px;
     justify-content: space-between;
   }
   .tile-top { display: flex; align-items: center; justify-content: space-between; width: 100%; }
   .tile .tile-icon-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 19px;
-    background: rgba(255,255,255,0.6);
+    font-size: 20px;
+    background: transparent;
   }
-  .tile .tile-label { font-weight: 700; font-size: 16px; font-family: "Prompt", sans-serif; }
-  .tile .tile-desc { font-size: 13px; opacity: 0.85; line-height: 1.4; }
-  .tile.tile-green { background: #DCFCE7; color: #166534; }
-  .tile.tile-blue { background: #CCFBF1; color: #115E59; }
-  .tile.tile-orange { background: #ECFCCB; color: #3F6212; }
-  .tile.tile-purple { background: #E3EFE1; color: #3F6B4A; }
-  .tile.tile-teal { background: #D9E9DD; color: #24513A; }
-  .tile.active { border-color: currentColor; }
+  .tile-top .ti-arrow-up-right { color: var(--ink-soft); font-size: 15px; }
+  .tile .tile-label { font-weight: 700; font-size: 15.5px; font-family: "Prompt", sans-serif; color: var(--ink); }
+  .tile .tile-desc { font-size: 12.5px; color: var(--ink-soft); line-height: 1.4; }
+  .tile.tile-green .tile-icon-circle { color: #24996B; }
+  .tile.tile-blue .tile-icon-circle { color: #2384A0; }
+  .tile.tile-orange .tile-icon-circle { color: #C2820F; }
+  .tile.tile-purple .tile-icon-circle { color: #8564C4; }
+  .tile.tile-teal .tile-icon-circle { color: #1C9488; }
+  .tile.active { border-color: var(--accent); }
+  .tile.tile-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .tile.tile-primary .tile-icon-circle { color: #FFFFFF; }
+  .tile.tile-primary .tile-label { color: #FFFFFF; }
+  .tile.tile-primary .tile-desc { color: #DCEAE1; }
+  .tile.tile-primary .tile-top .ti-arrow-up-right { color: #DCEAE1; }
   .tile-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -290,11 +300,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 19px;
+    background: transparent;
   }
-  .icon-circle.ok { background: var(--accent-bg); color: var(--accent-dark); }
-  .icon-circle.warn { background: var(--warn-bg); color: var(--warn); }
-  .icon-circle.fail { background: var(--danger-bg); color: var(--danger); }
+  .icon-circle.ok { color: var(--accent); }
+  .icon-circle.warn { color: var(--warn); }
+  .icon-circle.fail { color: var(--danger); }
   .section-title {
     display: flex;
     align-items: center;
@@ -405,7 +416,9 @@
   .drawer-overlay.open { display: block; }
   @media (max-width: 899px) {
     .sidebar { display: none; }
-    .hamburger-btn { display: block; }
+    .hamburger-btn { display: none; }
+    .bottom-tab-bar { display: flex; }
+    .main-content { padding-bottom: 66px; }
     .sidebar.drawer-open {
       display: flex;
       position: fixed;
@@ -414,6 +427,33 @@
       box-shadow: 4px 0 24px rgba(0,0,0,0.15);
     }
   }
+  .bottom-tab-bar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    z-index: 60;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    justify-content: space-around;
+  }
+  .bottom-tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    color: var(--ink-soft);
+    font-size: 11px;
+    cursor: pointer;
+    flex: 1;
+    background: none;
+    border: none;
+  }
+  .bottom-tab-item i { font-size: 22px; }
+  .bottom-tab-item.active { color: var(--accent); }
 
   /* ---- แบบฟอร์มพิมพ์ (ใบบันทึกผลอบรม) ---- */
   .print-form { display: none; }
@@ -545,7 +585,7 @@ function LoginPage({ onLogin }) {
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <div
           className="icon-circle ok"
-          style={{ width: 56, height: 56, fontSize: 28, margin: "0 auto 14px" }}
+          style={{ width: 56, height: 56, fontSize: 28, margin: "0 auto 14px", background: "var(--accent-bg)" }}
         >
           <i className="ti ti-clipboard-check" aria-hidden="true"></i>
         </div>
@@ -2820,6 +2860,7 @@ function EmployeePage({ session }) {
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [courseExams, setCourseExams] = useState([]);
   const [attemptsByExam, setAttemptsByExam] = useState({});
+  const [courseMaterials, setCourseMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
@@ -2881,12 +2922,21 @@ function EmployeePage({ session }) {
   const openEntry = async (entry) => {
     setSelectedEntry(entry);
     setLoadingDetail(true);
-    const { data: exams } = await supabaseClient
-      .from("exams")
-      .select("id, exam_name, exam_form_url, plan_id_entry")
-      .eq("course_id", entry.course_id)
-      .order("exam_name");
+    const [{ data: exams }, { data: materials }] = await Promise.all([
+      supabaseClient
+        .from("exams")
+        .select("id, exam_name, exam_form_url, plan_id_entry")
+        .eq("course_id", entry.course_id)
+        .order("exam_name"),
+      supabaseClient
+        .from("course_materials")
+        .select("id, title, drive_url")
+        .eq("course_id", entry.course_id),
+    ]);
     setCourseExams(exams || []);
+    // RLS จะกรองให้เอง: เห็นแถวนี้ก็ต่อเมื่อเคยถูกมาร์คว่า "ขาด" คอร์สนี้เท่านั้น
+    // คนทั่วไปที่ไม่เคยขาด จะได้ array ว่างกลับมาเสมอ ไม่ error
+    setCourseMaterials(materials || []);
 
     if (me && exams && exams.length > 0) {
       const examIds = exams.map((e) => e.id);
@@ -2947,6 +2997,27 @@ function EmployeePage({ session }) {
         <p style={{ color: "#667085" }}>
           {MONTH_NAMES[selectedEntry.month]} {selectedEntry.year}
         </p>
+
+        {courseMaterials.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div className="section-title">
+              <i className="ti ti-folder" aria-hidden="true"></i>
+              เอกสารอบรม (สำหรับอ่านทบทวนก่อนทำข้อสอบ)
+            </div>
+            {courseMaterials.map((m) => (
+              <div className="attendance-row" key={m.id}>
+                <div style={{ flex: 1 }}>
+                  <div className="name">{m.title || "(ไม่มีชื่อ)"}</div>
+                </div>
+                <a href={m.drive_url} target="_blank" rel="noopener noreferrer">
+                  <button className="secondary">
+                    <i className="ti ti-external-link" aria-hidden="true"></i> เปิดเอกสาร
+                  </button>
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
 
         {loadingDetail ? (
           <p style={{ color: "#667085" }}>กำลังโหลดรายวิชา...</p>
@@ -3034,17 +3105,24 @@ function HomePage({ role, navItems, onNavigate, myName }) {
 
   return (
     <div className="page">
-      <div className="nav-section" style={{ padding: 20 }}>
-        <h2 style={{ margin: 0 }}>{greeting}{myName ? " " + myName : ""} 👋</h2>
-        <p style={{ color: "var(--ink-soft)", marginTop: 6, marginBottom: 0 }}>
-          ยินดีต้อนรับสู่ระบบข้อสอบ QPT เลือกเมนูที่ต้องการทำต่อได้จากด้านล่าง
-        </p>
+      <div style={{ padding: "6px 4px 18px" }}>
+        <h2 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: "-0.3px" }}>
+          {greeting}{myName ? " " + myName : ""} 👋
+        </h2>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 12, borderLeft: "2px solid var(--accent)", paddingLeft: 12 }}>
+          <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: 13.5, fontStyle: "italic", lineHeight: 1.5 }}>
+            "{quote}"
+          </p>
+        </div>
       </div>
+      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-soft)", letterSpacing: 1, margin: "0 0 10px 4px" }}>
+        เมนูลัด
+      </p>
       <div className="tile-row" style={{ marginTop: 4 }}>
         {shortcuts.map((item) => (
           <div
             key={item.key}
-            className={"tile tile-" + item.color}
+            className={"tile tile-" + item.color + (item.key === "exam" ? " tile-primary" : "")}
             onClick={() => onNavigate(item.key)}
           >
             <div className="tile-top">
@@ -3059,17 +3137,6 @@ function HomePage({ role, navItems, onNavigate, myName }) {
             </div>
           </div>
         ))}
-      </div>
-      <div
-        className="nav-section"
-        style={{ padding: 20, marginTop: 14, background: "var(--accent-bg)", border: "none" }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <i className="ti ti-quote" style={{ fontSize: 26, color: "var(--accent-dark)", flexShrink: 0 }} aria-hidden="true"></i>
-          <p style={{ margin: 0, color: "var(--accent-dark)", fontWeight: 600, fontSize: 14.5 }}>
-            {quote}
-          </p>
-        </div>
       </div>
     </div>
   );
@@ -3139,7 +3206,7 @@ function Dashboard({ session, role, onLogout }) {
   const sidebarInner = (
     <React.Fragment>
       <div className="sidebar-logo">
-        <div className="icon-circle ok">
+        <div className="icon-circle ok" style={{ background: "var(--accent-bg)" }}>
           <i className="ti ti-clipboard-check" aria-hidden="true"></i>
         </div>
         QPT
@@ -3165,9 +3232,6 @@ function Dashboard({ session, role, onLogout }) {
       <div className="main-content">
         <div className="content-topbar">
           <div className="content-topbar-left">
-            <button className="hamburger-btn" onClick={() => setDrawerOpen(true)}>
-              <i className="ti ti-menu-2" aria-hidden="true"></i>
-            </button>
             <span className="role-badge" style={{ marginBottom: 0 }}>
               {myName ? myName + " (" + roleShortLabel + ")" : roleShortLabel}
             </span>
@@ -3181,6 +3245,25 @@ function Dashboard({ session, role, onLogout }) {
         </div>
 
         {renderContent()}
+      </div>
+
+      <div className="bottom-tab-bar">
+        {(navItems.length > 4 ? navItems.slice(0, 3) : navItems).map((item) => (
+          <button
+            key={item.key}
+            className={"bottom-tab-item" + (view === item.key ? " active" : "")}
+            onClick={() => goTo(item.key)}
+          >
+            <i className={"ti " + item.icon} aria-hidden="true"></i>
+            {item.label}
+          </button>
+        ))}
+        {navItems.length > 4 && (
+          <button className="bottom-tab-item" onClick={() => setDrawerOpen(true)}>
+            <i className="ti ti-dots" aria-hidden="true"></i>
+            เพิ่มเติม
+          </button>
+        )}
       </div>
     </div>
   );
