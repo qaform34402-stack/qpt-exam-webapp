@@ -753,15 +753,16 @@ function AdminCalendarPage() {
     } else {
       const { data: attempts } = await supabaseClient
         .from("exam_attempts")
-        .select("employee_id, exam_id, raw_score, max_score, attempt_no, passed")
+        .select("employee_id, exam_id, raw_score, max_score, attempt_no, passed, submitted_at")
         .in("exam_id", examIds);
 
-      // เก็บเฉพาะ "ครั้งล่าสุด" ต่อคน ต่อข้อสอบ (attempt_no มากสุด = ล่าสุด)
+      // เก็บเฉพาะ "ครั้งล่าสุด" ต่อคน ต่อข้อสอบ (ใช้เวลาที่สอบจริง submitted_at ตัดสิน
+      // ไม่ใช้ attempt_no เพราะเลขนี้อาจนับเพี้ยนได้จากการ import/backfill ซ้ำหลายรอบ)
       const latestMap = {};
       (attempts || []).forEach((a) => {
         if (!latestMap[a.employee_id]) latestMap[a.employee_id] = {};
         const cur = latestMap[a.employee_id][a.exam_id];
-        if (!cur || (a.attempt_no || 0) > (cur.attempt_no || 0)) {
+        if (!cur || new Date(a.submitted_at).getTime() > new Date(cur.submitted_at).getTime()) {
           latestMap[a.employee_id][a.exam_id] = a;
         }
       });
@@ -947,6 +948,8 @@ function AdminCalendarPage() {
                 {completionRows.map((r, i) => {
                   const scores = scoresByEmployee[r.employee_id] || {};
                   const scoreEntries = Object.entries(scores);
+                  const passedCount = scoreEntries.filter(([, s]) => s.passed === true).length;
+                  const isCompleted = r.total_exams > 0 && passedCount === r.total_exams;
                   return (
                     <tr key={i}>
                       <td>{r.employee_code}</td>
@@ -956,18 +959,13 @@ function AdminCalendarPage() {
                           <span style={{ color: "var(--ink-soft)" }}>ยังไม่สอบ</span>
                         ) : (
                           scoreEntries.map(([examId, s], j) => (
-                            <div key={j}>
-                              {examNameMap[examId] ? (
-                                <span style={{ color: "var(--ink-soft)" }}>{examNameMap[examId]}: </span>
-                              ) : null}
-                              {s.raw_score} / {s.max_score}
-                            </div>
+                            <div key={j}>{s.raw_score} / {s.max_score}</div>
                           ))
                         )}
                       </td>
-                      <td>{r.passed_exams} / {r.total_exams}</td>
-                      <td className={r.completed ? "pass" : "fail"}>
-                        {r.completed ? "ผ่านครบ" : "ยังไม่ผ่าน"}
+                      <td>{passedCount} / {r.total_exams}</td>
+                      <td className={isCompleted ? "pass" : "fail"}>
+                        {isCompleted ? "ผ่านครบ" : "ยังไม่ผ่าน"}
                       </td>
                     </tr>
                   );
@@ -2942,7 +2940,7 @@ function EmployeePage({ session }) {
       const examIds = exams.map((e) => e.id);
       const { data: attempts } = await supabaseClient
         .from("exam_attempts")
-        .select("exam_id, raw_score, max_score, passed, attempt_no")
+        .select("exam_id, raw_score, max_score, passed, attempt_no, submitted_at")
         .eq("employee_id", me.id)
         .in("exam_id", examIds);
 
@@ -2953,7 +2951,10 @@ function EmployeePage({ session }) {
       });
       const summary = {};
       Object.keys(grouped).forEach((examId) => {
-        const list = grouped[examId].sort((x, y) => (y.attempt_no || 0) - (x.attempt_no || 0));
+        // เรียงตามเวลาสอบจริง (submitted_at) ไม่ใช้ attempt_no เพราะอาจนับเพี้ยนจากการ backfill
+        const list = grouped[examId].sort(
+          (x, y) => new Date(y.submitted_at).getTime() - new Date(x.submitted_at).getTime()
+        );
         summary[examId] = {
           latest: list[0],
           everPassed: list.some((a) => a.passed),
