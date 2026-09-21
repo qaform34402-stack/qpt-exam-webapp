@@ -913,7 +913,7 @@ function AdminCalendarPage() {
         </div>
         {availableShifts.length === 0 && (
           <p className="no-print" style={{ color: "var(--warn)", fontSize: 13 }}>
-            ⚠️ ยังไม่มีการมาร์คเข้าอบรมกะไหนเลยสำหรับคอร์สนี้ พิมพ์ฟอร์มไม่ได้จนกว่าจะมี session
+            ⚠️ ยังไม่มีการเช็คชื่อเข้าอบรมกะไหนเลยสำหรับคอร์สนี้ พิมพ์ฟอร์มไม่ได้จนกว่าจะมีการสร้างรอบอบรม
           </p>
         )}
         <div className="no-print">
@@ -2088,7 +2088,7 @@ function DashboardPage() {
       {/* อัตราการเข้าอบรมรายเดือน */}
       <h3 style={{ marginTop: 28 }}>อัตราการเข้าอบรมรายเดือน</h3>
       {totalAttendanceRecords === 0 ? (
-        <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีข้อมูลการมาร์คเข้าอบรมในปีนี้</p>
+        <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีข้อมูลการเช็คชื่อเข้าอบรมในปีนี้</p>
       ) : (
         <MonthlyBarChart
           color="var(--accent)"
@@ -2541,7 +2541,7 @@ function ForemanPage({ session }) {
     if (
       !window.confirm(
         "ลบ session วันที่ " + sess.session_date + " กะ " + (sess.shift || "-") +
-        " ออกทั้งหมดหรือไม่? (ข้อมูลการเข้าอบรมที่มาร์คไว้ในนี้จะหายไปด้วย)"
+        " ออกทั้งหมดหรือไม่? (ข้อมูลการเข้าอบรมที่เช็คชื่อไว้ในนี้จะหายไปด้วย)"
       )
     ) {
       return;
@@ -2716,7 +2716,7 @@ function ForemanPage({ session }) {
 
         <div className="section-title">
           <i className="ti ti-folder" aria-hidden="true"></i>
-          เอกสารอบรม (เปิดให้พนักงานดูก่อนมาร์คได้เลย)
+          เอกสารอบรม (เปิดให้พนักงานดูก่อนเช็คชื่อได้เลย)
         </div>
         {courseMaterials.length === 0 ? (
           <p style={{ color: "#667085" }}>ยังไม่มีเอกสารสำหรับหลักสูตรนี้</p>
@@ -2735,9 +2735,9 @@ function ForemanPage({ session }) {
           ))
         )}
 
-        <h3 style={{ marginTop: 24 }}>Session ที่มีอยู่</h3>
+        <h3 style={{ marginTop: 24 }}>รอบอบรมที่มีอยู่</h3>
         {sessions.length === 0 && (
-          <p style={{ color: "#667085" }}>ยังไม่มี session สำหรับหลักสูตรนี้</p>
+          <p style={{ color: "#667085" }}>ยังไม่มีรอบอมรมสำหรับหลักสูตรนี้</p>
         )}
         {sessions.map((s) => (
           <div className="course-card" key={s.id} onClick={() => openSession(s)}>
@@ -2760,7 +2760,7 @@ function ForemanPage({ session }) {
           </div>
         ))}
 
-        <h3 style={{ marginTop: 24 }}>สร้าง session ใหม่</h3>
+        <h3 style={{ marginTop: 24 }}>สร้างรอบอบรมใหม่</h3>
         <div className="new-session-row">
           <input
             type="date"
@@ -2773,7 +2773,7 @@ function ForemanPage({ session }) {
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          <button onClick={createSession}>สร้าง + เริ่มมาร์ค</button>
+          <button onClick={createSession}>สร้าง + เริ่มเช็คชื่อ</button>
         </div>
       </div>
     );
@@ -2786,7 +2786,7 @@ function ForemanPage({ session }) {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>เลือกหลักสูตรที่จะมาร์คการเข้าอบรม</h2>
+        <h2>เลือกหลักสูตรที่จะเช็คชื่อการเข้าอบรม</h2>
         <button className="refresh-btn" onClick={loadInitial}>🔄 รีเฟรช</button>
       </div>
       <div className="month-tabs">
@@ -3173,7 +3173,7 @@ function Dashboard({ session, role, onLogout }) {
     ],
     foreman: [
       { key: "home", label: "หน้าหลัก", icon: "ti-home", color: "green" },
-      { key: "main", label: "งานของฉัน", icon: "ti-briefcase", color: "green", desc: "มาร์คการเข้าอบรม" },
+      { key: "main", label: "งานของฉัน", icon: "ti-briefcase", color: "green", desc: "เช็คชื่อการเข้าอบรม" },
       { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue", desc: "ทำแบบทดสอบของตัวเอง" },
     ],
     employee: [
