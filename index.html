@@ -1075,7 +1075,7 @@ function AdminCalendarPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>ปฏิทินอบรม ปี {year}</h2>
+        <h2>🗓️ปฏิทินอบรม ปี {year}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button
             className="refresh-btn"
@@ -1755,7 +1755,7 @@ function AnnualPlannerPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>แผนอบรมประจำปี {year}</h2>
+        <h2>📜แผนอบรมประจำปี {year}</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
           <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
@@ -2046,7 +2046,7 @@ function DashboardPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>Dashboard ภาพรวมปี {year}</h2>
+        <h2>📈Dashboard ภาพรวมปี {year}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="secondary" onClick={() => setYear(year - 1)}>◀ {year - 1}</button>
           <button className="secondary" onClick={() => setYear(year + 1)}>{year + 1} ▶</button>
@@ -2234,7 +2234,7 @@ function EmployeeManagementPage() {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>จัดการพนักงาน</h2>
+        <h2>🪪จัดการพนักงาน</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setShowAddForm(!showAddForm)}>+ เพิ่มพนักงานใหม่</button>
           <button className="refresh-btn" onClick={loadEmployees}>🔄 รีเฟรช</button>
@@ -3045,7 +3045,7 @@ function EmployeePage({ session }) {
   return (
     <div className="page">
       <div className="header-row">
-        <h2>หลักสูตรของฉัน</h2>
+        <h2>📑หลักสูตรของฉัน</h2>
         <button className="refresh-btn" onClick={loadInitial}>🔄 รีเฟรช</button>
       </div>
       <div className="month-tabs">
