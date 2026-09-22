@@ -2148,30 +2148,60 @@ function EmployeeManagementPage() {
     }
     setFormError("");
     setSaving(true);
+    const codeBeingAdded = newCode.trim();
     try {
       const res = await fetch(BACKUP_WEB_APP_URL, {
         method: "POST",
         body: JSON.stringify({
           secret: BACKUP_SECRET,
           action: "create_employee",
-          employeeCode: newCode.trim(),
+          employeeCode: codeBeingAdded,
           name: newName.trim(),
           role: newRole,
           shift: newShift.trim() || null,
         }),
       });
-      const data = await res.json();
-      if (!data.success) {
+
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        // Apps Script บางครั้งตอบกลับเป็นหน้า HTML ทางผ่านแทน JSON จริง
+        // ทั้งที่ฝั่งเซิร์ฟเวอร์ทำงานสำเร็จไปแล้ว - เช็คจากฐานข้อมูลจริงแทนการเชื่อ response นี้
+        data = null;
+      }
+
+      if (data && data.success === false) {
+        // กรณีนี้ชัดเจนว่าไม่สำเร็จจริง (ได้ JSON ที่บอกเหตุผลมาตรงๆ)
         setFormError(data.error || "เพิ่มพนักงานไม่สำเร็จ");
         setSaving(false);
         return;
       }
+
+      // เช็คจากฐานข้อมูลจริงว่าพนักงานคนนี้ถูกสร้างขึ้นแล้วจริงหรือไม่
+      // (ครอบคลุมทั้งกรณี response อ่านไม่ออกและกรณี data.success ไม่ชัดเจน)
+      const { data: created } = await supabaseClient
+        .from("employees")
+        .select("id")
+        .eq("employee_code", codeBeingAdded)
+        .maybeSingle();
+
+      setSaving(false);
+
+      if (!created) {
+        setFormError(
+          (data && data.error) ||
+            "ไม่แน่ใจว่าบันทึกสำเร็จหรือไม่ (การเชื่อมต่อขัดข้อง) กรุณาตรวจสอบในรายชื่อด้านล่าง หากยังไม่มีให้ลองกดบันทึกอีกครั้ง"
+        );
+        loadEmployees();
+        return;
+      }
+
       setNewCode("");
       setNewName("");
       setNewRole("employee");
       setNewShift("");
       setShowAddForm(false);
-      setSaving(false);
       loadEmployees();
     } catch (err) {
       setFormError("เพิ่มพนักงานไม่สำเร็จ: " + err.message);
