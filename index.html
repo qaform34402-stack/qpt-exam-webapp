@@ -458,9 +458,10 @@
   /* ---- ปฏิทินแผนอบรม: ภาพรวม 12 เดือน + ปฏิทินรายวัน ---- */
   .year-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
     gap: 12px;
     margin-top: 16px;
+    align-items: start;
   }
   .month-cell {
     background: var(--surface);
@@ -468,7 +469,6 @@
     border-radius: 12px;
     padding: 12px 14px;
     cursor: pointer;
-    min-height: 130px;
     min-width: 0;
   }
   .month-cell:hover { border-color: var(--accent); }
@@ -484,43 +484,27 @@
   }
   .month-cell-count { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
   .month-cell-item {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
     font-size: 13px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 2px 0;
+    line-height: 1.45;
+    padding: 3px 0;
+    border-top: 1px dashed var(--line);
   }
-  .month-cell-more { font-size: 12px; color: var(--ink-soft); }
-  .day-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
-    margin-top: 10px;
-  }
-  .day-head { text-align: center; font-size: 12px; color: var(--ink-soft); padding: 4px 0; }
-  .day-cell {
-    background: var(--surface);
-    border: 1px solid var(--line);
+  .month-cell-head + .month-cell-item { border-top: none; }
+  .month-cell-item i { font-size: 15px; margin-top: 2px; flex-shrink: 0; }
+  .month-cell-flag { color: var(--warn); font-size: 12px; }
+  .session-history {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--cream);
     border-radius: 8px;
-    min-height: 74px;
-    padding: 4px;
-    min-width: 0;
+    font-size: 13px;
   }
-  .day-cell.blank { background: transparent; border: none; }
-  .day-cell.today { border: 2px solid var(--accent); }
-  .day-num { font-size: 12px; color: var(--ink-soft); }
-  .day-chip {
-    font-size: 11px;
-    background: var(--accent-bg);
-    color: var(--accent-dark);
-    border-radius: 6px;
-    padding: 2px 4px;
-    margin-top: 3px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: pointer;
-  }
+  .session-history-row { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 2px 0; }
+  .session-round { font-weight: 600; color: var(--accent-dark); }
+  .month-cell-more { font-size: 12px; color: var(--ink-soft); }
 
   /* ---- แบบฟอร์มพิมพ์ (ใบบันทึกผลอบรม) ---- */
   .print-form { display: none; }
@@ -1610,13 +1594,39 @@ function AnnualPlannerPage({ deptId, departments }) {
     setCourses(courseRes.data || []);
     setCalendarRows(calRes.data || []);
 
+    // ---- session อบรมจริงของแผนปีนี้: วันที่ กะ ผู้อบรม จำนวนคนเข้า และเป็นรอบอบรมซ่อมหรือไม่ ----
     const calIds = (calRes.data || []).map((r) => r.id);
     if (calIds.length > 0) {
       const { data: sessData } = await supabaseClient
         .from("training_sessions")
-        .select("id, session_date, shift, calendar_id")
-        .in("calendar_id", calIds);
-      setYearSessions(sessData || []);
+        .select("id, session_date, shift, calendar_id, foreman_id")
+        .in("calendar_id", calIds)
+        .order("session_date", { ascending: true });
+      const sessList = sessData || [];
+      const sessIds = sessList.map((x) => x.id);
+      const trainerIds = [...new Set(sessList.map((x) => x.foreman_id).filter(Boolean))];
+      const [attRes, trainerRes] = await Promise.all([
+        sessIds.length > 0
+          ? supabaseClient.from("session_attendance").select("session_id, status, note").in("session_id", sessIds)
+          : Promise.resolve({ data: [] }),
+        trainerIds.length > 0
+          ? supabaseClient.from("employees").select("id, name").in("id", trainerIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+      const trainerName = {};
+      (trainerRes.data || []).forEach((t) => { trainerName[t.id] = t.name; });
+      const present = {};
+      const makeup = {};
+      (attRes.data || []).forEach((a) => {
+        if (a.status === "present") present[a.session_id] = (present[a.session_id] || 0) + 1;
+        if (a.note === "อบรมซ่อม") makeup[a.session_id] = true;
+      });
+      setYearSessions(sessList.map((x) => ({
+        ...x,
+        trainerName: trainerName[x.foreman_id] || "-",
+        presentCount: present[x.id] || 0,
+        isMakeup: !!makeup[x.id],
+      })));
     } else {
       setYearSessions([]);
     }
@@ -2305,16 +2315,26 @@ function AnnualPlannerPage({ deptId, departments }) {
                   <span>{MONTH_FULL_NAMES[m]}</span>
                   <span className="month-cell-count">{entries.length} แผน</span>
                 </div>
-                {entries.slice(0, 3).map((e) => (
-                  <div key={e.id} className="month-cell-item">
-                    {e.courses ? e.courses.name : "(ไม่พบชื่อหลักสูตร)"}
-                  </div>
-                ))}
-                {entries.length > 3 && (
-                  <div className="month-cell-more">+ อีก {entries.length - 3} หลักสูตร</div>
-                )}
+                {entries.length === 0 && <div className="month-cell-more">ยังไม่มีแผน</div>}
+                {entries.map((e) => {
+                  const trained = trainedIds.has(e.id);
+                  const noExam = (examsByCourse[e.course_id] || 0) === 0;
+                  return (
+                    <div key={e.id} className="month-cell-item">
+                      <i
+                        className={"ti " + (trained ? "ti-circle-check-filled" : "ti-circle")}
+                        style={{ color: trained ? "var(--success)" : "var(--ink-soft)" }}
+                        aria-label={trained ? "อบรมแล้ว" : "ยังไม่อบรม"}
+                      ></i>
+                      <span>
+                        {e.courses ? e.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+                        {noExam && <span className="month-cell-flag"> · ขาดข้อสอบ</span>}
+                      </span>
+                    </div>
+                  );
+                })}
                 {entries.length > 0 && (
-                  <div style={{ marginTop: 6 }}>
+                  <div style={{ marginTop: 8 }}>
                     <span className={"badge " + (trainedCount === entries.length ? "ok" : "warn")}>
                       อบรมแล้ว {trainedCount}/{entries.length}
                     </span>
@@ -2330,65 +2350,18 @@ function AnnualPlannerPage({ deptId, departments }) {
         (() => {
           const m = viewMonth;
           const entries = visibleEntriesByMonth[m];
-          const entryById = {};
-          calendarRows.forEach((e) => { entryById[e.id] = e; });
-          const daysInMonth = new Date(year, m, 0).getDate();
-          const firstWeekday = new Date(year, m - 1, 1).getDay(); // 0 = อาทิตย์
-          const sessionsByDay = {};
-          yearSessions.forEach((x) => {
-            const [sy, sm, sd] = String(x.session_date).slice(0, 10).split("-").map((v) => parseInt(v, 10));
-            if (sy === year && sm === m) {
-              if (!sessionsByDay[sd]) sessionsByDay[sd] = [];
-              sessionsByDay[sd].push(x);
-            }
-          });
-          const cells = [];
-          for (let i = 0; i < firstWeekday; i++) cells.push(null);
-          for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-          const nowD = new Date();
           return (
             <div style={{ marginTop: 16 }}>
               <div className="header-row">
                 <button className="secondary" onClick={() => setViewMonth(null)}>← ภาพรวมทั้งปี</button>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="secondary" disabled={m === 1} onClick={() => setViewMonth(m - 1)}>◀</button>
-                  <button className="secondary" disabled={m === 12} onClick={() => setViewMonth(m + 1)}>▶</button>
+                  <button className="secondary" disabled={m === 1} onClick={() => setViewMonth(m - 1)}>◀ {m > 1 ? MONTH_NAMES[m - 1] : ""}</button>
+                  <button className="secondary" disabled={m === 12} onClick={() => setViewMonth(m + 1)}>{m < 12 ? MONTH_NAMES[m + 1] : ""} ▶</button>
                 </div>
               </div>
               <h3 style={{ marginTop: 14 }}>{MONTH_FULL_NAMES[m]} {year + 543}</h3>
 
-              <div className="day-grid">
-                {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((w) => (
-                  <div key={w} className="day-head">{w}</div>
-                ))}
-                {cells.map((d, i) => {
-                  if (d === null) return <div key={"b" + i} className="day-cell blank"></div>;
-                  const isToday = year === nowD.getFullYear() && m === nowD.getMonth() + 1 && d === nowD.getDate();
-                  return (
-                    <div key={d} className={"day-cell" + (isToday ? " today" : "")}>
-                      <div className="day-num">{d}</div>
-                      {(sessionsByDay[d] || []).map((x) => {
-                        const e = entryById[x.calendar_id];
-                        return (
-                          <div
-                            key={x.id}
-                            className="day-chip"
-                            title={(e && e.courses ? e.courses.name : "") + " · กะ " + (x.shift || "-")}
-                            onClick={() => e && openPlanDetail(e)}
-                          >
-                            {(e && e.courses ? e.courses.name : "อบรม")} · {x.shift || "-"}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-              <p style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 6 }}>
-                ในปฏิทินคือวันที่มีการสร้าง session อบรมจริง · กดที่รายการเพื่อจัดการเอกสาร/ข้อสอบ
-              </p>
-
-              <h3 style={{ marginTop: 20, borderBottom: "1px solid var(--line)", paddingBottom: 6 }}>
+              <h3 style={{ marginTop: 8, borderBottom: "1px solid var(--line)", paddingBottom: 6 }}>
                 แผนอบรมเดือนนี้ ({entries.length})
               </h3>
               {entries.length === 0 ? (
@@ -2398,9 +2371,10 @@ function AnnualPlannerPage({ deptId, departments }) {
                   const matCount = materialsByCourse[entry.course_id] || 0;
                   const examCount = examsByCourse[entry.course_id] || 0;
                   const isEditing = editingId === entry.id;
-                  const sessCount = yearSessions.filter((x) => x.calendar_id === entry.id).length;
+                  const entrySess = yearSessions.filter((x) => x.calendar_id === entry.id);
+                  const sessCount = entrySess.length;
                   return (
-                    <div className="course-card" key={entry.id}>
+                    <div className="course-card" key={entry.id} style={{ alignItems: "flex-start" }}>
                       <div className="icon-circle ok">
                         <i className="ti ti-book-2" aria-hidden="true"></i>
                       </div>
@@ -2413,6 +2387,20 @@ function AnnualPlannerPage({ deptId, departments }) {
                         <span className={"badge " + (sessCount > 0 ? "ok" : "warn")}>
                           {sessCount > 0 ? "อบรมแล้ว " + sessCount + " รอบ" : "ยังไม่อบรม"}
                         </span>
+                        {entrySess.length > 0 && (
+                          <div className="session-history">
+                            {entrySess.map((x, i) => (
+                              <div key={x.id} className="session-history-row">
+                                <span className="session-round">
+                                  รอบที่ {i + 1}{x.isMakeup ? " (อบรมคนที่ขาด)" : ""}
+                                </span>
+                                <span>
+                                  {formatThaiDate(x.session_date)} · กะ {x.shift || "-"} · ผู้อบรม {x.trainerName} · เข้าอบรม {x.presentCount} คน
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       {isEditing ? (
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -3771,6 +3759,7 @@ function HomePage({ role, navItems, onNavigate, myName, me, deptId }) {
 
   // ---- การอบรม/สอบที่กำลังจะมาถึง (เดือนนี้ + เดือนหน้า) และที่ค้างสอบของตัวเอง ----
   const [upcoming, setUpcoming] = useState(null); // null = กำลังโหลด
+  const [showOverdue, setShowOverdue] = useState(false);
 
   useEffect(() => {
     loadUpcoming();
@@ -3827,7 +3816,36 @@ function HomePage({ role, navItems, onNavigate, myName, me, deptId }) {
       const c = myComp[r.id];
       return c && c.total_exams > 0 && !c.completed;
     });
-    setUpcoming({ rows: upcomingRows, overdue, myComp, team, curKey });
+
+    // ข้อสอบของหลักสูตรที่ค้าง (เฉพาะของแผนกตัวเอง/กลาง) + ข้อไหนเคยสอบผ่านแล้ว
+    const overdueExams = {};
+    if (me && overdue.length > 0) {
+      const courseIds = [...new Set(overdue.map((r) => r.course_id))];
+      const { data: exs } = await deptOrCentral(
+        supabaseClient
+          .from("exams")
+          .select("id, course_id, exam_name, exam_form_url")
+          .in("course_id", courseIds)
+          .order("exam_name"),
+        deptId
+      );
+      const exIds = (exs || []).map((e) => e.id);
+      let passedSet = new Set();
+      if (exIds.length > 0) {
+        const { data: att } = await supabaseClient
+          .from("exam_attempts")
+          .select("exam_id")
+          .eq("employee_id", me.id)
+          .eq("passed", true)
+          .in("exam_id", exIds);
+        passedSet = new Set((att || []).map((a) => a.exam_id));
+      }
+      (exs || []).forEach((e) => {
+        if (!overdueExams[e.course_id]) overdueExams[e.course_id] = [];
+        overdueExams[e.course_id].push({ ...e, passed: passedSet.has(e.id) });
+      });
+    }
+    setUpcoming({ rows: upcomingRows, overdue, overdueExams, myComp, team, curKey });
   };
 
   const myStatusBadge = (calId) => {
@@ -3861,13 +3879,49 @@ function HomePage({ role, navItems, onNavigate, myName, me, deptId }) {
         ) : (
           <>
             {upcoming.overdue.length > 0 && (
-              <div
-                style={{ background: "var(--warn-bg)", color: "var(--warn)", borderRadius: 10, padding: "10px 14px", marginTop: 10, fontSize: 14, cursor: "pointer" }}
-                onClick={() => onNavigate("exam")}
-              >
-                <i className="ti ti-alert-triangle" aria-hidden="true" style={{ marginRight: 6 }}></i>
-                คุณยังค้างสอบ {upcoming.overdue.length} หลักสูตร:{" "}
-                {upcoming.overdue.map((r) => (r.courses ? r.courses.name : "") + " (" + MONTH_NAMES[r.month] + ")").join(", ")}
+              <div style={{ background: "var(--warn-bg)", borderRadius: 10, marginTop: 10, overflow: "hidden" }}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: "var(--warn)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+                  onClick={() => setShowOverdue(!showOverdue)}
+                >
+                  <i className="ti ti-alert-triangle" aria-hidden="true"></i>
+                  <span style={{ flex: 1 }}>คุณยังค้างสอบ {upcoming.overdue.length} หลักสูตร</span>
+                  <i className={"ti " + (showOverdue ? "ti-chevron-up" : "ti-chevron-down")} aria-hidden="true" style={{ fontSize: 18 }}></i>
+                </div>
+                {showOverdue && (
+                  <div style={{ padding: "0 14px 10px" }}>
+                    {upcoming.overdue.map((r) => {
+                      const exs = upcoming.overdueExams[r.course_id] || [];
+                      return (
+                        <div key={r.id} style={{ background: "var(--surface)", borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>
+                          <div style={{ fontWeight: 600, fontSize: 14 }}>
+                            {r.courses ? r.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+                            <span style={{ color: "var(--ink-soft)", fontWeight: 400 }}> · แผนเดือน {MONTH_NAMES[r.month]}</span>
+                          </div>
+                          {exs.length === 0 ? (
+                            <div style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 4 }}>ยังไม่มีลิงก์ข้อสอบ</div>
+                          ) : (
+                            exs.map((ex) => (
+                              <div key={ex.id} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                                <span style={{ flex: 1, fontSize: 14, minWidth: 0 }}>{ex.exam_name}</span>
+                                <span className={"badge " + (ex.passed ? "ok" : "warn")} style={{ margin: 0 }}>
+                                  {ex.passed ? "เคยผ่านแล้ว" : "ยังไม่ผ่าน"}
+                                </span>
+                                <button
+                                  style={{ padding: "6px 12px", fontSize: 13 }}
+                                  disabled={!ex.exam_form_url}
+                                  onClick={() => window.open(ex.exam_form_url, "_blank")}
+                                >
+                                  เข้าสอบ
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
             {upcoming.rows.length === 0 ? (
@@ -3976,6 +4030,7 @@ function Dashboard({ session, role, onLogout }) {
       { key: "home", label: "หน้าหลัก", icon: "ti-home", color: "green" },
       { key: "main", label: "งานของฉัน", icon: "ti-briefcase", color: "green", desc: "เช็คชื่อการเข้าอบรม" },
       { key: "scores", label: "ดูคะแนน", icon: "ti-chart-bar", color: "orange", desc: "ผลสอบของพนักงานรายเดือน" },
+      { key: "dashboard", label: "Dashboard", icon: "ti-layout-dashboard", color: "teal", desc: "ภาพรวมอัตราผ่าน/เข้าอบรม" },
       { key: "exam", label: "สอบของฉัน", icon: "ti-pencil", color: "blue", desc: "ทำแบบทดสอบของตัวเอง" },
     ],
     employee: [
@@ -4005,6 +4060,7 @@ function Dashboard({ session, role, onLogout }) {
     if (role === "foreman") {
       if (view === "main") return <ForemanPage key={k} session={session} {...common} />;
       if (view === "scores") return <AdminCalendarPage key={k} {...common} />;
+      if (view === "dashboard") return <DashboardPage key={k} {...common} />;
       if (view === "exam") return <EmployeePage key={k} session={session} {...common} />;
     }
     return <EmployeePage key={k} session={session} {...common} />;
@@ -4118,25 +4174,7 @@ function App() {
     setRole(null);
   };
 
-  // ออกจากระบบอัตโนมัติถ้าไม่มีการใช้งาน 3 นาที
-  // (สำคัญมากสำหรับแท็บเล็ตที่ใช้ร่วมกันหลายคน กันคนถัดไปเห็น session ค้าง)
-  useEffect(() => {
-    if (!session) return;
-    let timer;
-    const resetTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        handleLogout();
-      }, 3 * 60 * 1000);
-    };
-    const events = ["click", "keydown", "touchstart"];
-    events.forEach((e) => window.addEventListener(e, resetTimer));
-    resetTimer();
-    return () => {
-      clearTimeout(timer);
-      events.forEach((e) => window.removeEventListener(e, resetTimer));
-    };
-  }, [session]);
+  // (ยกเลิกการออกจากระบบอัตโนมัติเมื่อไม่ได้ใช้งานแล้ว — ผู้ใช้กด "ออกจากระบบ" เอง)
 
   if (loadingSession) return <div className="container">กำลังโหลด...</div>;
   if (!session) return <LoginPage onLogin={applySession} />;
