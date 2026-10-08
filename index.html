@@ -2480,7 +2480,8 @@ function MonthlyBarChart({ data, color }) {
 // ---- หน้า Dashboard ภาพรวม (แอดมิน) ----
 function DashboardPage({ deptId }) {
   const [year, setYear] = useState(new Date().getFullYear());
-  const [completionRows, setCompletionRows] = useState([]);
+  const [passPlans, setPassPlans] = useState([]); // ผลสอบต่อแผน [{id, month, name, examCount, takers, passed}]
+  const [rosterSize, setRosterSize] = useState(0);
   const [attendanceRows, setAttendanceRows] = useState([]);
   const [planRows, setPlanRows] = useState([]); // แผนอบรมของปีนี้ [{id, month, courses}]
   const [trainedCalIds, setTrainedCalIds] = useState(new Set()); // แผนที่มี session อบรมจริงแล้ว
@@ -2504,27 +2505,79 @@ function DashboardPage({ deptId }) {
     const calIds = calRows.map((r) => r.id);
     setPlanRows(calRows);
 
-    let compQuery = supabaseClient
-      .from("v_course_completion")
-      .select("calendar_id, course_id, course_name, month, employee_id, total_exams, passed_exams, completed")
-      .eq("year", year);
-    if (deptId) compQuery = compQuery.in("calendar_id", calIds.length > 0 ? calIds : ["00000000-0000-0000-0000-000000000000"]);
-
-    const [compRes, attRes, sessRes, deptEmpRes] = await Promise.all([
-      compQuery,
+    const courseIds = [...new Set(calRows.map((r) => r.course_id))];
+    const [attRes, sessRes, empRes, examRes, allCalRes] = await Promise.all([
       supabaseClient
         .from("session_attendance")
         .select("status, training_sessions(calendar_id, training_calendar(year, month))"),
       calIds.length > 0
         ? supabaseClient.from("training_sessions").select("calendar_id").in("calendar_id", calIds)
         : Promise.resolve({ data: [] }),
-      deptId
-        ? supabaseClient.from("employees").select("id").eq("department_id", deptId)
-        : Promise.resolve({ data: null }),
+      deptEq(supabaseClient.from("employees").select("id").eq("active", true), deptId),
+      courseIds.length > 0
+        ? deptOrCentral(supabaseClient.from("exams").select("id, course_id").in("course_id", courseIds), deptId)
+        : Promise.resolve({ data: [] }),
+      // แผนทุกปีของหลักสูตรเดียวกัน ใช้หา "รอบถัดไป" เพื่อแบ่งช่วงเวลาของแต่ละรอบ
+      courseIds.length > 0
+        ? deptEq(supabaseClient.from("training_calendar").select("id, year, month, course_id").in("course_id", courseIds), deptId)
+        : Promise.resolve({ data: [] }),
     ]);
-    // กันไว้: ถ้า view ยังจับคู่ข้ามแผนก ให้เหลือเฉพาะพนักงานของแผนกที่ดูอยู่
-    const deptEmpIds = deptEmpRes.data ? new Set(deptEmpRes.data.map((e) => e.id)) : null;
-    setCompletionRows((compRes.data || []).filter((r) => !deptEmpIds || deptEmpIds.has(r.employee_id)));
+
+    // ---- อัตราสอบผ่าน: นับจาก "คนที่สอบจริง" เท่านั้น (ไม่รวมคนที่ยังไม่ได้สอบ) ----
+    const roster = new Set((empRes.data || []).map((e) => e.id));
+    setRosterSize(roster.size);
+    const examsByCourse = {};
+    (examRes.data || []).forEach((x) => {
+      if (!examsByCourse[x.course_id]) examsByCourse[x.course_id] = [];
+      examsByCourse[x.course_id].push(x.id);
+    });
+    const examIds = (examRes.data || []).map((x) => x.id);
+    const attempts = [];
+    for (let from = 0; examIds.length > 0; from += 1000) {
+      const { data: page } = await supabaseClient
+        .from("exam_attempts")
+        .select("employee_id, exam_id, passed, submitted_at")
+        .in("exam_id", examIds)
+        .order("submitted_at")
+        .range(from, from + 999);
+      attempts.push(...(page || []));
+      if (!page || page.length < 1000) break;
+    }
+    // เดือนที่สอบตามเวลาไทย (submitted_at เก็บเป็น UTC ไม่มีโซน)
+    const ymOf = (ts) => {
+      const str = String(ts).replace(" ", "T");
+      const d = new Date(/Z$|[+-]\d\d:?\d\d$/.test(str) ? str : str + "Z");
+      const th = new Date(d.getTime() + 7 * 3600 * 1000);
+      return th.getUTCFullYear() * 100 + (th.getUTCMonth() + 1);
+    };
+    // แต่ละรอบนับผลสอบตั้งแต่หลังรอบก่อนหน้า จนถึงก่อนรอบถัดไป (รอบแรกนับย้อนหลังได้)
+    const roundsByCourse = {};
+    (allCalRes.data || []).forEach((r) => {
+      if (!roundsByCourse[r.course_id]) roundsByCourse[r.course_id] = [];
+      roundsByCourse[r.course_id].push(r.year * 100 + r.month);
+    });
+    Object.values(roundsByCourse).forEach((list) => list.sort((a, b) => a - b));
+    const plans = calRows.map((plan) => {
+      const exs = examsByCourse[plan.course_id] || [];
+      const key = plan.year * 100 + plan.month;
+      const rounds = roundsByCourse[plan.course_id] || [key];
+      const prev = rounds.filter((k) => k < key).pop();
+      const next = rounds.find((k) => k > key);
+      const exSet = new Set(exs);
+      const byEmp = {};
+      attempts.forEach((a) => {
+        if (!exSet.has(a.exam_id) || !roster.has(a.employee_id)) return;
+        const k = ymOf(a.submitted_at);
+        if (prev !== undefined && k < key) return; // เป็นของรอบก่อนหน้า
+        if (next !== undefined && k >= next) return; // เป็นของรอบถัดไป
+        if (!byEmp[a.employee_id]) byEmp[a.employee_id] = new Set();
+        if (a.passed) byEmp[a.employee_id].add(a.exam_id);
+      });
+      const takers = Object.keys(byEmp).length;
+      const passed = Object.values(byEmp).filter((set) => exs.length > 0 && set.size === exs.length).length;
+      return { id: plan.id, month: plan.month, name: plan.courses ? plan.courses.name : "", examCount: exs.length, takers, passed };
+    });
+    setPassPlans(plans);
 
     const calIdSet = new Set(calIds);
     const attThisYear = (attRes.data || []).filter(
@@ -2541,23 +2594,22 @@ function DashboardPage({ deptId }) {
 
   if (loading) return <div className="page">กำลังโหลด...</div>;
 
-  // เอาเฉพาะแถวที่มีข้อสอบจริง (total_exams > 0) กันไม่ให้คอร์สที่ยังไม่มีข้อสอบ
-  // ถูกนับเป็น "ไม่ผ่าน" ปนไปกับคนที่สอบจริงแล้วไม่ผ่าน
-  const gradableRows = completionRows.filter((r) => r.total_exams > 0);
-
-  // ---- สรุปภาพรวม ----
-  const totalAttempts = gradableRows.length;
-  const totalCompleted = gradableRows.filter((r) => r.completed).length;
+  // ---- สรุปภาพรวม (อัตราผ่าน = คนที่ผ่านครบทุกชุด ÷ คนที่สอบจริง) ----
+  const gradablePlans = passPlans.filter((p) => p.examCount > 0);
+  const totalAttempts = gradablePlans.reduce((sum, p) => sum + p.takers, 0);
+  const totalCompleted = gradablePlans.reduce((sum, p) => sum + p.passed, 0);
   const overallRate = totalAttempts > 0 ? (totalCompleted / totalAttempts) * 100 : 0;
-  const uniqueCourses = new Set(completionRows.map((r) => r.course_id)).size;
-  const uniqueEmployees = new Set(completionRows.map((r) => r.employee_id)).size;
+  const uniqueCourses = new Set(
+    planRows.filter((r) => gradablePlans.some((p) => p.id === r.id)).map((r) => r.course_id)
+  ).size;
+  const uniqueEmployees = rosterSize;
 
   // ---- อัตราผ่านรายเดือน ----
   const monthlyStats = {};
   for (let m = 1; m <= 12; m++) monthlyStats[m] = { total: 0, completed: 0 };
-  gradableRows.forEach((r) => {
-    monthlyStats[r.month].total += 1;
-    if (r.completed) monthlyStats[r.month].completed += 1;
+  gradablePlans.forEach((p) => {
+    monthlyStats[p.month].total += p.takers;
+    monthlyStats[p.month].completed += p.passed;
   });
 
   // ---- อัตราการเข้าอบรมรายเดือน ----
@@ -2602,7 +2654,7 @@ function DashboardPage({ deptId }) {
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "16px 0" }}>
         {[
           { label: "หลักสูตรที่มีข้อสอบ", value: uniqueCourses, suffix: "" },
-          { label: "พนักงานที่ถูกติดตาม", value: uniqueEmployees, suffix: " คน" },
+          { label: "พนักงานในแผนก", value: uniqueEmployees, suffix: " คน" },
           { label: "อัตราผ่านรวมทั้งปี", value: overallRate.toFixed(1), suffix: "%" },
           { label: "อัตราเข้าอบรมรวม", value: overallAttendanceRate.toFixed(1), suffix: "%" },
           {
@@ -2639,6 +2691,9 @@ function DashboardPage({ deptId }) {
 
       {/* อัตราผ่านรายเดือน */}
       <h3 style={{ marginTop: 24 }}>อัตราสอบผ่านรายเดือน (ทั้งแผนก)</h3>
+      <p style={{ color: "var(--ink-soft)", fontSize: 13, marginTop: -6 }}>
+        คนที่ผ่านครบทุกชุดข้อสอบ ÷ คนที่สอบจริง (ไม่นับคนที่ยังไม่ได้สอบ)
+      </p>
       {totalAttempts === 0 ? (
         <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีข้อมูลข้อสอบในปีนี้</p>
       ) : (
@@ -2651,6 +2706,37 @@ function DashboardPage({ deptId }) {
             return { label: name, value: rate, hasData: s.total > 0 };
           })}
         />
+      )}
+      {totalAttempts > 0 && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: "pointer", fontSize: 14, color: "var(--accent-dark)" }}>
+            ดูตัวเลขรายหลักสูตร (ที่มาของกราฟ)
+          </summary>
+          <table>
+            <thead>
+              <tr>
+                <th>เดือน</th>
+                <th>หลักสูตร</th>
+                <th>คนที่สอบ</th>
+                <th>ผ่านครบ</th>
+                <th>ยังไม่ผ่าน</th>
+                <th>% ผ่าน</th>
+              </tr>
+            </thead>
+            <tbody>
+              {gradablePlans.filter((p) => p.takers > 0).sort((a, b) => a.month - b.month).map((p) => (
+                <tr key={p.id}>
+                  <td>{MONTH_NAMES[p.month]}</td>
+                  <td>{p.name}</td>
+                  <td>{p.takers}</td>
+                  <td>{p.passed}</td>
+                  <td>{p.takers - p.passed}</td>
+                  <td>{((p.passed / p.takers) * 100).toFixed(1)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
       )}
 
       {/* อัตราการเข้าอบรมรายเดือน */}
