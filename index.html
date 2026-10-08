@@ -461,7 +461,7 @@
     grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
     gap: 12px;
     margin-top: 16px;
-    align-items: start;
+    align-items: stretch; /* กล่องในแถวเดียวกันสูงเท่ากัน ตามกล่องที่มีรายการมากที่สุด */
   }
   .month-cell {
     background: var(--surface);
@@ -470,6 +470,8 @@
     padding: 12px 14px;
     cursor: pointer;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
   }
   .month-cell:hover { border-color: var(--accent); }
   .month-cell.current { border: 2px solid var(--accent); }
@@ -2334,7 +2336,7 @@ function AnnualPlannerPage({ deptId, departments }) {
                   );
                 })}
                 {entries.length > 0 && (
-                  <div style={{ marginTop: 8 }}>
+                  <div style={{ marginTop: "auto", paddingTop: 8 }}>
                     <span className={"badge " + (trainedCount === entries.length ? "ok" : "warn")}>
                       อบรมแล้ว {trainedCount}/{entries.length}
                     </span>
