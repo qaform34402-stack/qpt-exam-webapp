@@ -2580,7 +2580,6 @@ function DashboardPage({ deptId }) {
   const duePlans = planRows.filter((r) => isDue(r.month));
   const trainedDue = duePlans.filter((r) => trainedCalIds.has(r.id));
   const planRate = duePlans.length > 0 ? (trainedDue.length / duePlans.length) * 100 : 0;
-  const overduePlans = duePlans.filter((r) => !trainedCalIds.has(r.id));
   const planMonthly = {};
   for (let m = 1; m <= 12; m++) planMonthly[m] = { total: 0, trained: 0 };
   planRows.forEach((r) => {
@@ -2636,18 +2635,6 @@ function DashboardPage({ deptId }) {
             return { label: name, value: rate, hasData: st.total > 0 && isDue(m) };
           })}
         />
-      )}
-      {overduePlans.length > 0 && (
-        <div style={{ background: "var(--warn-bg)", borderRadius: 10, padding: "10px 14px", marginTop: 10, fontSize: 14 }}>
-          <div style={{ color: "var(--warn)", fontWeight: 600, marginBottom: 6 }}>
-            ⚠️ แผนที่ถึงกำหนดแล้วแต่ยังไม่มี session อบรม ({overduePlans.length})
-          </div>
-          {overduePlans.map((r) => (
-            <div key={r.id} style={{ color: "var(--ink)" }}>
-              • {MONTH_NAMES[r.month]} — {r.courses ? r.courses.name : "(ไม่พบชื่อหลักสูตร)"}
-            </div>
-          ))}
-        </div>
       )}
 
       {/* อัตราผ่านรายเดือน */}
