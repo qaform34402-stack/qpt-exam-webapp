@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8" />
-<title>ระบบข้อสอบ QPT</title>
+<title>ระบบข้อสอบ QA</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -455,6 +455,73 @@
     }
   }
 
+  /* ---- ปฏิทินแผนอบรม: ภาพรวม 12 เดือน + ปฏิทินรายวัน ---- */
+  .year-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .month-cell {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    min-height: 130px;
+    min-width: 0;
+  }
+  .month-cell:hover { border-color: var(--accent); }
+  .month-cell.current { border: 2px solid var(--accent); }
+  .month-cell.empty { background: var(--cream); }
+  .month-cell-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: "Prompt", sans-serif;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .month-cell-count { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+  .month-cell-item {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 2px 0;
+  }
+  .month-cell-more { font-size: 12px; color: var(--ink-soft); }
+  .day-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .day-head { text-align: center; font-size: 12px; color: var(--ink-soft); padding: 4px 0; }
+  .day-cell {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    min-height: 74px;
+    padding: 4px;
+    min-width: 0;
+  }
+  .day-cell.blank { background: transparent; border: none; }
+  .day-cell.today { border: 2px solid var(--accent); }
+  .day-num { font-size: 12px; color: var(--ink-soft); }
+  .day-chip {
+    font-size: 11px;
+    background: var(--accent-bg);
+    color: var(--accent-dark);
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+
   /* ---- แบบฟอร์มพิมพ์ (ใบบันทึกผลอบรม) ---- */
   .print-form { display: none; }
   .print-form-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
@@ -496,6 +563,23 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 const SUNGROUP_LOGO_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAGQCAIAAAD9V4nPAAAgAElEQVR4Ae2dCZwU1bn2T/cA6k0Ul8QoahJvkmty7zXmSjSJfkbpmZ5uZgNBBdEwYkAWJWwaiYoIuAQ1YtRoDNzPuESNuwn4RdTEBUVFSSCC7OvMwOzTPTO9V50vp6q7urq7qqZnppdTfZ6mf0NVdS3v+3/frqfPqbMQihcIgAAIgAAICEyACOw7XAcBEAABEAABCiFEEoAACIAACAhNAEIodPjhPAiAAAiAAIQQOQACIAACICA0AQih0OGH8yAAAiAAAhBC5AAIgAAIgIDQBCCEQocfzoMACIAACEAIkQMgAAIgAAJCE4AQCh1+OA8CIAACIAAhRA6AAAiAAAgITQBCKHT44TwIgAAIgACEEDkAAiAAAiAgNAEIodDhh/MgAAIgAAIQQuQACIAACICA0AQghEKHH86DAAiAAAhACJEDIAACIAACQhOAEAodfjgPAiAAAiAAIUQOgAAIgAAICE0AQih0+OE8CIAACIAAhBA5AAIgAAIgIDQBCKHQ4YfzIAACIAACEELkAAiAAAiAgNAEIIRChx/OgwAIgAAIQAiRAyAAAiAAAkITgBAKHX44DwIgAAIgACFEDoAACIAACAhNAEIodPjhPAiAAAiAAIQQOQACIAACICA0AQih0OGH8yAAAiAAAhBC5AAIgAAIgIDQBCCEQocfzoMACIAACEAIkQMgAAIgAAJCE4AQCh1+OA8CIAACIAAhRA6AAAiAAAgITQBCKHT44TwIgAAIgACEEDkAAiAAAiAgNAEIodDhh/MgAAIgAAIQQuQACIAACICA0AQghEKHH86DAAiAAAhACJEDIAACIAACQhOAEAodfjgPAiAAAiAAIUQOgAAIgAAICE0AQih0+OE8CIAACIAAhBA5AAIgAAIgIDQBCKHQ4YfzIAACIAACEELkAAiAAAiAgNAEIIRChx/OgwAIgAAIQAiRAyAAAiAAAkITgBAKHX44DwIgAAIgACFEDoAACIAACAhNAEIodPjhPAiAAAiAAIQQOQACIAACICA0AQih0OGH8yAAAiAAAhBC5AAIgAAIgIDQBCCEQocfzoMACIAACEAIkQMgAAIgAAJCE4AQCh1+OA8CIAACIAAhRA6AAAiAAAgITQBCKHT44TwIgAAIgACEEDkAAiAAAiAgNAEIodDhh/MgAAIgAAIQQuQACIAACICA0AQghEKHH86DAAiAAAhACJEDIAACIAACQhOAEAodfjgPAiAAAiAAIUQOgAAIgAAICE0AQih0+OF8TgjIVKbsnfEKh6nPR5sPR3bsCKz7oOnFF5qefGLf/fdvW7Jk55KlO9h7yY6lS3YsXbr9tpv3rnjg8FNPHX75pZ51H0R37KTNzezYcFh/UuUy8QuxZVmmsu66ukX9UYampeyAFRAQmwCEUOz4w/uBETARPipLvl07G//0ytZfLd957aymujH+754ZO3a4PHSoXFYWJSRKSNjoHSIkon7qJNEhZfLQobHjhvvPOutQbe3Oa2d9/qtfNa5e7d+9m0pSmr1MC1URNlPB+Mdpx2EVBEAgSQBCmGSBJRDQCFjIiraPuhDw+ZvWvX/ggV93XnlF7Dv/GTnhS71HHNFJiI+QXkXeJEJkQqj+7SDU4WBvQqiDUCdbkJ0O2ZncTVaODSjn6SSk94gjIiecIH37jM6rJu9/6IHGde8G/P40SzJWZUql7B3JOBwbQEAUAhBCUSINPwdDIE1OopS27djW/sTvoxMnBP/rv1qOHX6YkG5CJL3aMZFT1M7hVETOQR1O6mTL1OFgf5UFyvRP3S3lb3xj6gklQvyEHCKk5djhof/+78gVk9of/7/tn2+J6X1LsVW3olvU745lEAABCCFyAAT6JqCKSITS7m3bIitWBC++eP9pp+13OEOpQpVQvhRJG/RGp+4MySIjJSRIyEEHOXDaqeHxF0ceuL97+/aIzhX900NWP5q2rtsTiyAgOAEIoeAJAPeNCehlQ6Y02toiPf9859Rpn3/1a+3Jqk61bjPxN17+U0p+Dr16Getiopho/KlO/DJP5aQOp6zWrCaUuN1BPv/61zumTZNeeCHa0ZHxLNHYTWwFARCglEIIkQYgkEaAFf+S9Yiff9710INbf3Bue1lZ8jkfq+FkasSe8CX1T5M0J3WUGW3XdmALWQthylHKacsou7p2Eqf6lFE1r72sbMv557ffv4Ju3550LOlPchuWQAAEVAIQQmQCCBgRkOXY1s+2zZ9/6KSTkk1dFPlRJFAt9iXULi5LSssXA13MVLK+txg+ONTEVftUUVNWOtS2qHIYI6Tx5JN33LgwtvUzta0ppNAozNgGAowAhBB5AALpBLo+3bBtypTgUf8Wb/DJSn6q5pUppUD1b1LMEiKULoQmZT7DQmS8eKdJnVbgS9vS1yo7uXpdWWm8EzzqqJ2T6zs2bkx3EusgAAIJAhDCBAn8X/oEpESVpyzLUqL2U9vI/G/fs7dh5ozQ0V/sVZuAsuJdurz1JUVJgeRhT0lpUxP64hcaZs5q371LDXLKE1CZvYyDr3aXNPnQ+BBsBQEbEoAQ2jBoMDlLAmbd3pkeqh3RkyrY09HR9ouF3Sef5FPbwhg//ONL5LISWlZty55u+gnpPunE9ltu7u5oU/lp+sd+FrDfBazfYZZosRsIlBIBCGEpRRO+ZEtAKQTFb/phSv2rVvrPPLNNbYHpcMSboiQapCh6Y1qfmZUa5ejBYTbXStTTKpod762odF5UvGsjxH/mf/sefzykoMoYHC6hhea/IbJFjP1AwD4EIIT2iRUszTUBidLQp5/4J05oGpJoEep00rLM7gp2rCBNrdF1sr78WuPShmFDfZOuCH2yIf5bIEX2WE0oakNznWs4H9cEIIRchwfG5YiAdmPXFqgcDvsffWTPv58ebxTqcMjKaGdKiSqz/GfWU4LbytJMIdS18SEkRsjeb/x776O/lYPBTMhJTJmfYQsIlBwBCGHJhRQOpROIV/cpTwUTY2/u2btvylU+rS40WXWpSaC+XKi1GuVW9jINSxVC5mCZ8tb5pTw43DdlCt23Vy0FKk8N4yIILUzPI6yXLgEIYenGFp4xAomHXjoaXWv/0vCtb8Z7xzt15aSkHKqyoZYCNWnMFBtOt5h021CtVccBUJfLWJtYQhq++Y3ONasVWKw9LSRQlyxYFIIAhFCIMIvupHZrl2INt9/RO2xojI2IrZSNnPbTuWyazGS1j9KURnY6YoT0lpUdvH2JnDbNk/LsUIMnehbB/9IlACEs3diK7pmuBYhyL+/paG+5ZHx8jgg2EYTaR95QCNM3pjTFTCk4clgoNCvjGpqqeOp0SIT0ENIyYWK3r1P0xIH/4hGAEIoX85LyONkRkLmV0D61EKN0FoyXZ/yffeb//shug4eChvIg5EZFC7vO+YFv8z/VHFG62ut6FsbxJiiXVCLBGaEJQAiFDr/9nU9InnmDf5nS3jfWtn/zm2FlFlw2aQPehgScTqrMBtx2+uk9b74Z/wUhK10N7Z8o8AAELAhACC3g4CPuCSTu1qwwGF+O26wpZOj555pGjGBNY5yOlMGpDcVA7I1sPHEnm1Wq4eSTQy+9lKSrJUIqZG0zFkDA1gQghLYOn/DG6+/LyWW2pK6F/vjM4eOPZyqYHC8mMXCM2JpnVCxmKhifW4OQphO/En7mD+kZloSc/gnWQcC+BCCE9o0dLE8nkCgVKo+1ZKntkUfahw2lhNiqqUtxa27jrYQYMULah5b5Hn5IHZY1nTXWQaCECEAISyiYwruitI6Jd4Nre/CBHsLu5rJDGWkT5b/+EGBC6GRdDP1OZ8fDDymZhcKg8F+w0gUAISzd2IroWbyJY9dzf/R/4QtsNkG1rs+pFrPSO0UYVQ8Wt0DGzdXZ81TWDUMixPdvR3U//4KI2QSfhSEAIRQm1AI4qpZZul991Tf8uKhaI8ok0Knc07nRmP6UzIom1U6npM5673RECek5/viu1X/Snryi/4QAXyaxXIQQihXvUvQ25bbcs+69rhEnR5XWMax+z3gqCYhiHwRkZ7w+WXY6JKcjQkjXySd1v7+uFPMHPoEAhRAiCexDQJM8k8dVoW3b2s/4VkRVQVsUvOxgpNrUKEZI8xn/Edq2TSsX6vPGJCD6XbAMAvwSgBDyGxtYlk4gVQjTbr5Sa0vTRRdKqgqWKf3h7CAzRav87C8cJ3teeNA1SmptVclrE9wbSmN67LAOAhwTgBByHByYZkqA3YpThDASaZg2VVVBqj7c6u+NHvtbE1D62ocJaZ05U46ETSOTGhbz3fAJCHBEAELIUTBgigUBnewlZlZiBcT45q6HHuxhZUFlHnbrGzo+HQwBQroJ6XpghUmkEqEx+RibQYBPAhBCPuMCq9IIKINra1Wj2ocy6y8ReOvNzi8cEx8+BsXBwehcX8eqHe07jh0efusNLQj60rn6w0T3q0W/F5ZBgFMCEEJOAwOzzAioj6YSRUEaaWtpG3k26zKozi/Y163cNs/k+HNEbTVDHWVRQjq/991gewuTwLjopU4DYhY8bAcBLglACLkMC4zKjkCUUv/UqQGlgQwUrjAEmBw6HQFCOmfMjLEwMSVM/DpJFgWTS9mFEnuBQBEJQAiLCB+XzopA2i1VHVBU3dj5x2fbhw2LzywRHz6mjx5yhVGLEr2KOpWx8iCWEN+wYf6X1BFnUkKUspJVhLETCBSZAISwyAHA5bMloN1fEwvRA/t9Z5zBRpBRngvK6Duf99pUpyLwTnW2phgh3f/5nUhTgxLB1HkLEzHKNrjYDwSKSgBCWFT8uHj2BLR7a2Kh/bprWaVofEBRVl9XouUw7vxSRnBlA5qHCDk092dKDJUmvInQoA9F9nmNPXkgACHkIQqwIUsCyWajHX/9a++RR2ktRSGBxSFASPcRR/a+964av0TDmSyjid1AgBcCEEJeIgE7zAioxQytsMF2C/S0X3ShOqBocQQg75WQ3JUCzThLhBy+6ELaGzALH7aDAP8EIIT8xwgWpo0iQ1seW6kNImN2g8b2AhEgJEpI+/+uQpqCgH0JQAjtGztBLZfb2lq+8x0mhHgoyEPB1OmQCWk660za0SFoRsJt+xOAENo/hsJ4oNaOdt19N6sUTcwTVKByDw+Sw6cNTtanIuJ09N6zPKX6OmVFmByFo/YkACG0Z9zEs1q9r8b27W386qloI8OP/LOuFGVOSkjT6V8LHTygJKbEWo1CCMX7ktrXYwihfWMnlOWsQaJMaXDZ0lC8UpQkRvyyTbsSftQrl5awgWZY/8IgIcFlyxT5k7WB14TKUThrXwIQQvvGTijL2Q023Hzo8BlnqB0HqZOwsgiftYUCWuVk3QpbvvGNwOHDyqhrbDB0vEDALgQghHaJlMB2JirZQvev6FV60Cv6R6jydApayAsBQvyERH59v24kboGTFq7bigCE0FbhEtjYoN/f/v2R2tNB1Ivyon/64i8hgf/5XrCnJz4Ut8DpCtftRQBCaK94iWtt4LlnW5PFQTwX5JCAkxJHm8PR+eKL4qYpPLcnAQihPeMmmNUxSoNj6tCJnsdSoL5E6HBECAmMu1iw9IS7ticAIbR9CEVwwPfPf3Ydd1y8mUx8DnrCvyoIZiGhDjYGevC4Y4OfbxEhLeFjyRCAEJZMKEvZkc5ly/yYfTe17MWZymoteEkPIa133VXK6QjfSo4AhLDkQlp6DkXCwe+fLceFUF8Q1C9z+MxMKJOc1OGkTofsdEQJCZ5zrhwOlV4mwqNSJQAhLNXIlo5fbe+/1/tvR6rT0CvdBzWBgRBqKPhYYELIRpmJDhva/UF8bqbSSUR4UroEIISlG9tS8ezQ4kXdrDjIxheleEDIXwVpalcWp6xM2Nt488JSSUD4UfoEIISlH2N7exgK9pw7ko2yXcZq3jh7MAZ7DAk4I4T4fvRD2ttr79yD9cIQgBAKE2q7OaqOJxP6x99jRx7B2ouWqc0xtEYZhrdgbCwmAVl5RsgmBnGQyLAh0a2s7WhiXCC75R/sFYkAhFCkaNvEVzbAdmL+gub774vE60UdMn+1giihphBwOuQyp1pTKhHS88hvlIzTpqLAAKQ2+QaKZyaEULyYc++xcuNU/8iHL7uETTfhQLuYYhb1UtTO+udIYiR0iZC948cnck2W49OHJDbgfxDgiQCEkKdoCG9LohpNltUatcNNwdNOUweUQXGwH2pkrVV5/pSVCJ2syUz7t75JDx1SxuBOBFb4DAcAPglACPmMi6BWxfWPxie0kz5cz+pF4z0IbVIkyrPM8C+HihCyWZnCw4bIH6xTqrm12lE1saGLgn7BuXUbQshtaMQ0TNK3rvD/5iGoIP/KZ2ohIeHf/VamVJmxXn1AqEpgSpTFTHR4zRUBCCFX4YAxKbfIxvrJiQFlUBy0IQFCOqf+VF/6kynay+A7ziMBCCGPURHYprgQsrtnIHjghz+CEJqWt/ivgyVk5/k/ikXCAuczXLcHAQihPeIkopW7d/tOOQVVo7YWwpbTTpH37hExe+GzrQhACG0VLpGMlda9GxpShsaithbCni98QXr3HTQcFemLa0tfIYS2DFspGx1vMUqjf3w2Rgh1ltlYCfivvcyrhYSNtSY9/ngppyt8KwkCEMKSCGMpOaE0rpApDfzyLmUmXgihDZvJqPqq9CaM3XlnsvOEvuVMKSUtfLE5AQihzQNYoubLlHZNnxafeimvpRacPH8EnKw3YejaWZIyrgxLVQhhiX5h7e4WhNDuESxN+6VY7HD1aEUIMbiabUuEDiaE3WPrYmGl4ShUsDS/rKXgFYSwFKJYej5EA8FdZ4/UTTphZzHIX5GL8zMrk/S2/fAHka6u0ktReFRKBCCEpRTN0vEl1tqy99v/oTwjhATamQAhB844I9jcXDqpCU9KkQCEsBSjan+fpN27Dp+GToR2lkC1tErIjhEn9R48mJqSKeMHpX6ENRAoAgEIYRGg45J9EpA3b+r4ypfRm97eXUeUqtGm448P/f3vyYjjSWGSBZZ4IQAh5CUSsENPQH73bf8xX4QQ2lsIlcYyLcccE37/fX1wsQwCvBGAEPIWEdjDCMjvvt19NITQ7lWjZZSQlmOOzhDCZMdCpDsI8EAAQshDFGBDOgEIoe3LguwZoZMS0jr8mMgHH6QGGEKYygNrxSYAISx2BHB9IwIQwpIQQtaPsO2LX4j87W/JIOMZYZIFlnghACHkJRKC25F2e5Tfeaf7i0fjGaHt5ZCQrqOOjP7lL4KnN9znnACEkPMACWqeJoSy0+7PycS2X60aXb8+nsdpv3cEzW64zR0BCCF3IRHaoMSNUn7nHb9aInQ6bV8q4nz8l7yaR0jz8GPC6c8Ihc5xOM8hAQghh0ER2iS1HYWkVY1CCPMqVPk+OSGtxxwdQfcJob/TNnAeQmiDIAloovzhB/7jj8UQa/YuDRNCCTl07PDwRx8JmMNw2UYEIIQ2CpZApso7trWfchKE0NZCKCsd6vd95SvBvfsEyl24akMCEEIbBq20TVYeE0oH9jd+/esQQnsLoTIf4a7TTgs0NpZ2zsI7uxOAENo9gqVpf7S3Z/tZZ0II7S2EZaxD/aHv/U+4o7000xRelQoBCGGpRNLmfiSai8bdiEWiB0aVKxPzotWobTtgKCXCrkpPNNCrxjUtyjbPWZhfOgQghKUTyxLxRLlZypS2T5qEDvX2LhEqQhj4Sb0kQQFL5NtZqm5ACEs1svb2S6a05xc3QgjtLYTKWKPBm2+WEskIPUyQwP98EYAQ8hUPWMOmnlDe4Ud/h6pRWwshdTijhMQefTQ9q6GH6USwXmQCEMIiBwCXTxBImZGAraxdGyXE5kpg28d7OeloT0iorEz+05/ShS99PZEC+B8EikQAQlgk8LhsOgG9ECp1aZv/0XvscBlamBNNKspJCGn/8gny3zemhxrrIMAZAQghZwGBOay4oBQZ2tubz/wvCUJYFA3rx0XNm/USsves70rdPiWpUQzEd5tfAhBCfmMDy3bV1UiEYAIKvuuHy0zNI6Tp0vEJAdRazCCvQYA7AhBC7kICgzQCnYtuSS0ROtmk5/0orIj9iK5QoMx+qciE9Nx5ZyKaqiCiI0WCB/7niQCEkKdowJZUAuH/tyajB4WTOsqUN0SOHwJlhj9QWJPRNWuUkCaKhanxxRoIcEIAQshJIGCGEYE9u0NKexnZ6cgodqBBKT9CyCxRAyQ7HbEyZZWQnq+cSHftUuIqpyhhyopR3LENBApLAEJYWN64Wr8IBILtF16gdaIwkkO+xED4alsndTrlMlZ9LRFywDWKRiJKwBXpg/71K/mxcwEJQAgLCBuX6j+BxhtviCjT2rF7q65cmFFAhCLyQMBJnfG2MzIhTTf+PB5wVQIhhP3PfxxRGAIQwsJwxlX6QUDWVaQF33g9WlZGHaztqKybrR5CyGPp05kU4wghkTffTHQOjWsgpLAfXwPsWkACEMICwsal+k8g1tke+frXtdpRHu/+hWqcybnvasW1+lcipPvfvy63tSl9QmWZsr4TCVHsfxLgCBDIMwEIYZ4B4/T9J5B2x/RNuSoQ71bvpLraUc6FQVzznI4QIYeuqqdKyV5fvu9/LuAIECgEAQhhISjjGoMh0PLM093KhD5UVzUqrszwWwBVenmyGJGIw9H13B8HE3QcCwKFJAAhLCRtXGsgBILNh0KnnZbRoTD5OAqiyBcBQoInnyy3tQ4k2DgGBIpBAEJYDOq4Zj8JBH96dZDVjmJYGb7lXymyBwjpmDGtnxHG7iBQTAIQwmLSx7WzJND5+l86hw5TC4VoL8pX+S9RVRvv5UlIzxHDWt98I8vIYjcQ4IEAhJCHKMCGPgjEuruD3x/JpmRyOiGEXAqhEhcn60cf/N5Zcm+gj4jiYxDgiQCEkKdowBZzAoHbl/rSp2TCKGv81JSq46GTLkK67v6leRjxCQjwSABCyGNUYFMmgd5du5pPORVNZrgsDjqog/0okQnxnToieGAf6wCjGxUhM5rYAgJcEYAQchUOGGNGQI5S2jvz2hgrFKoFQYI5KPgSRULChPTOmqmGEEJolsrYziEBCCGHQYFJxgRiH390+NjhWqFQP+IaX5KQaD8ijlWyo4wS0jz8mMDHH7LgYSw14xTGVk4JQAg5DQzMyiQQlaS2yZOpNmc9+tdzoLiJkdWcbFi1yZNjUkyVQZQIMxMYW7glACHkNjQwTE8gpt5Y5Q/W+Y7+IisU4s0ZgeZjh0c/WKfEDOVBfepi2QYEIIQ2CBJMpGzUZnZ7leXYjmum/uPEL2865ZRNp57C/uJdZAIjNp0y4u9fPmHvz66TY9FErkILEyTwvx0IQAjtECXYyCQw3hAx5Pf5du7w797t371L+bsbf4tKYJd/9y7fju0hv0+Xp/EfLrotWAQBfglACPmNDSwDAXsR0IqBafOH2MsLWCsgAQihgEG3n8vKHRaFDI4Dp2mgOgMhx5bCNBDIJAAhzGSCLTwS0N9pebQPNoEACNiWAITQtqETxvC4BLL/UOXGddQRHq7DA+PMCUAIzdngE84JoJDIQ4CUKCAUPIQCNgyYQJ6FUKbsn9HLeKvRnoXZxtoksrexuVqTRb0xPHcZ5tk2PcPkstIoNM3stNXkztktDfLw7C6S+71sanbuQeCMQhIoSv7nTwgVTVGEML6UqjH8CWE86YwMY9uMtpvnaf/2Nj+P/pP+nFPZN0XW045OW9Vfh5vlNBtT3Ol3RLjxCoaAAAjwRiDPQqh3NxqlbS107166eRP95z+5e/99I/XpO0Jppiv331CAfr6Vbt6cYfZm+s9NdNMmum+vUp5Ujkq/Y2unGtyCXhdiMbpzh0JyE/1nhlWbN9FdO2gson+oljxaklgUNv2DbuYsCps30+3baHt7KibN8HSs2gep+7O1aDTq9/ubmpoa+Xs1NDT4jDONSpLU3Nzc0NDAm9UNDQ1tbW2xWCwTdX+3dHd3Fz0uDQ0NnZ2d4XA4S+MlSbKwuaGhoT09abM88QB3k2W5paXFIkmam5sNy1V9Hmhxzrx+pDKMRrUBGQZIZsCH5UEIM+9P+/YcXnHf373ez0Z+b+8Z3zp00smHThnROIKvd8Pwo4OvvWbEUWKFjz17dpx9dsNJJzaNGNE04mS98U2njtj/5RNa6+upxPbMb3sOTQs6OppcroMnfqnp1CRGzbaDX/7SHq+HdvuVUChW6RyLBQMNl09oPOF4vRdFX244ZUTTiJMOnP61LWefvWnCBP+zT9OuLsXqzHwyLZ53dXWtWbNm6dKlM2fOnDp16hVcvsaPH//kk0/qApJc7OzsnDNnzoQJE3gzfNKkSVddddWsWbOWL1++cePGpMXZLUUikXXr1t19992zZ8+eNm1a0b2bNGnS1VdfPXPmzJ///OfPPvvs/v37rf3w+/1Tpky5/PLLDS2/5JJL7rrrLvUMsvKyPtvgPw2HwzfeeOOll15qaM9ll122cOHCQMBgbuRgMLhgwQKzAw3PVpiNkyZNmjJlyqxZs+68884NGzYMHlF/z5AHIUw1oeHpp1pPOonNLa68Mxc4GjTyhRdSbU+uSdu3Hz7xRDNTI4T0VI2mufi9nLyk9VJbq/8/vy0RovHU2yYTcviss0wKuDQaCPgryvX787CsOSIrTkUJOVBe0btjuzUG/aeff/751Vdf7XK53G53ZWWlx+MZzeXroosuevTRR/WWa8sdHR319fUVFRUcGu71eisrKysqKrxe7x133GFWqNV80Rba2tpuuumm8vJyLS5er7foDqruuN3u8vLyiy+++AXz7z6l1OfzjR071iyjXC7XTTfdpPprWA7TUORqIRQKzZgxw+VyGWIsLy+fNWtWb29v5uUCgcDUqVPNDjQ8W8E2aglWWVm5fPnyjo6OTPvztyVXQqgvdkiyHF/teHNtz7ChUUKo00E5nitAdjqYGLz0khloaefO5hGms8JGCOmtrVWqIs1OkOvtbS3dZ35XSh0w3PEAACAASURBVJ+xPT5fuUxI88jvU59fvapapNJKh9FgoMfjYf5yMHdBqg1l+tUwIZ1nfKtrz564F5YTvTY2Nl5xxRUVFRV1dXW1fL/cbvfKlSsNE6Kjo+OnP/2p1+vl2YOamppRo0YtXLjQ748nmKEv6saenp4bbrjB5XJx61FNTU1VVVV5efkbb7xh5ojP57vkkkuqq6sNvaisrFy0aJHZsfnYHg6Hr7322srKSkN7PB7P7NmzzYRwxowZHo/H8EBONtbU1Lhcruuvv76npycf9AzPmSsh1J+c1d+x22441OR2KTfrMup0ytzdduOyEb/5MiF8Qal6lCmV0urjmBCeMiIhHukSwoSwrq6wJcI2EyGMTxTePHIk9alVi/rQsOVoMNDt8SZ8SYVQzBhpKkhkJ2E/m4gjSEibxy2xh53sZVHvdM8994waNYqTb7K1GXYXQtW7UaNGPfTQQ2pcLP4+//zz5eXl1kB4+NTj8UydOtVM2iGEhY/RqFGjHnzwQYvUyu1HuRdC7TGW9OEHwWFDldnjnMqkZUR2OGWHU/+rn6NlJoQvJuCm6SBNFcJ08dCEMP2wxOly+z+7SpuZEDLblBJhphDGi+lMCL0clgi1xHCyn01O9pcS0ktI11PqEzWZ1TRo6aVj2traOmHChKqqqsJ/XQdwxRIQwrq6uqqqqpqamq1bt+rikL4oSdKCBQvcbvcAKBX+ELfb/eGHyqzC6X6wqlGUCAsckerqaq/Xu2XLloxo5GVD7oVQMzP020e0ujtWHGRVo9rNLl1Liq+IfVaNJkuEmvFxjzQh1HzP+0KKEKaDNRHCuEwrVaOV/JUItXI2SxJWWa0UTyOENFe6aSiYgjT1F8e6deuqqqr0NVc1NTUF/t5mfzm7C2Gd8qqtrS0vL7f+zd7Y2Hj55ZePHj06ezhF3NPlcj399NMpaZZYgRAWJS7l5eX3339/Igj5/T9fQihT2jF/fl93W550sfSFMJ5JXAohoQ5NCLXfGWxBJiR03DHygdR2falC+Morr7jdbp7FT38fsbsQar54vd7p06dLamNpo9vU1q1b1YKjdgi3C3V1dRUVFQ888ICRHygRFjpu6pN+j8czbdq0SCT+ZMQwNLnamEch7Jkzpy8h1B4Lpdz7ilM6HIgQJkst3DwjjItH88izTVuN8tVYRv0xZKyCLBMIYY1jt31ukfFPPPGEXR4Q1tbW6oUwrZGhLRrLaDfFqqqqiRMnWrTu+/TTT9W41Cgv7UA+F9xuN4SwkKHps12b1+utr6/v7Oy0+O7n6qM8CmH33Ll9CSEH+qc2D1F7d8SfESrFDbXMkSh5ZPmMMFdR6fs8KVWj6RiVqtGshFCrgbT88ZFe9Wq5c7oxfe3c18njQrjNgol9hTDNKd6E0PpWVVVVddlllx08eDDNC21148aNaksZToTQ2h0IYSFVsLa2ts8qHIGEUCIkQkiYj7f0gtZYJv5dTuhgto1ltFtA3hdyJITmKkViBQlNrM9eHGpfyW3btFhkss1GCGtqarxer4eD14UXXvjb3/420wtKaZ9CWFNT4/F41F6S+Xalz8ZHVVVVEyZMaGxsNPSFUrpx48Y+O04ULC76R8iGd3wIoSpO+c4r7fx9PjwWRQhlQgLHHtN8ztmHfnDOoXO/r70Pn3v2oXNHaquFWWj6zrdDf/2b9pVOu+2WaolQL4RKy14HZS17y2RCuk866fC55x4655z4WxegnETk8DnnNP3wh77TT2fdTC3kUP10GysRGrUYZRHrUwi9Xu/48ePnzp07j4PXrFmzXn75ZS3T9AvWQlhTUzNu3LjZs2fPnz8/337Mnz+/vr7eosOZ2v1OE8K0Ol7VKb0QGpbG1CeIs2fPzrc78+bNmzhxonUHTQhhTU3NJZdcMmfOnAKEQ00w6xbFQghhjJCW/3Me3fIZ7WinHR2p78wtaTvkYbW9nYbVp7KsH6HyTU6OEiCCEMZFUSkINl92Gd23j3a2sei054E2i3gb7eykTU3Ni24OMrUzqVPVCaFeM/TL1kLo9XqnTZu2Y8eOIDcvszEVrYXQ6/Vec801zc3NoVAo366EQqGOjo777rvPQjwGWSKsrq4eN27ce++919vbm293gsFgU1PTTTfdZCHtEEKPxzNnzpzOzs4ChENLMLNhAWprawUQQkIkp6P3RdMhzfS3uYIva0KYLBaWrhCy9kopTwoJiR57bHjT5sJgZ4iDwYYf/Mi0UDg4IVSHQfnzn/9cGHcGeRVrIfR4PNOnTy/kcBs9PT1Tpkwxq8IapBCWl5cvX758kMT6dfjGjRtra2vN6kgFF8K6ujqPxzN//vzCtNJUA+f3++vr680q4YUQQnnIkOjHHzEcrMIrKTn9yuyc7izpxnJOt6d0hTClBwurHSVE+upXYy0tamR09ZFmFZP9CIKKVfkbn/1RPbhlytV5EkK1W+7HH3/cDyuLt6u1EKolwuwH+RyMH2pVpyzL8+fPNytFDVII3W632eDjg7Hc4ti9e/eOHz8eQmgWUFUIg8HUPrsWQAf9kSRJixYtMisUiiKE4Q8/YCRlKkvstjhoqoM8gdWNvnSFUK2QTMihMphL7LRTw82HEkKo/Tyw4pMlejMhbL7qqnwIYV1dXbXy+uSTT7K0sLi79SmE06dP74pPylEIS2Ox2Lx588xqRwcphJWVlU899VQh3EhcY/fu3ePGjYMQWgjhvHnzCimEsVgMQjgkpAphIk15/r/UhbAsOegPIYoQHk6GQ1NAnY4lP83FUp6EUK0Hq66uLsrELgMA06cQXnPNNYUpEarGx2Kx/JUIIYQDyBD1kDwNuu3xeAovhLfccovwJcL1SolQS4eClQkzL5S5RbNKWSh1IdQ1VCFEOu20aLNOCFNR5GMNQqhShRDmI7u0c6JEGAgELGafgBBqqZKzBZlSqw71hMhDhoTShDBnF8/2RH3JX/I8EMIkizwsQQhVqBwK4bx588xq0lA1qvZHLJlpmCCEub+3ZSOEkY/W5/7CFmdM6F7if4tdlY90+0EI+4I1qM8hhCo+3oRQkiRUjaoT84ow+0ThhVCSpFtvvVXoqlHJ6Qy8+brx7VOnQMY7FHwrhDCvyCGEKl7ehPBf831dd911aCwjyOwThRdCWZYXLFhgVuUgQKtRhyNGSPPEy4J+n1719Mt5vfNanNxwjAwIoQWxwX8EIVQZ9imEM2bMiMVigwee5Rnef/99i453qBotvarRBQsWZJkbOdlt/fr1Y8aMMRt0VAghpA6Hz+loqXRLt9xCFy9W3/LixXJiWduY64Xb6K2Lpdtui61cGV7/QSRlojutfaTWdyC+BUKYk7w3O4m9hPDFF1+8++677x/o65577nn77bcNUVgLYXV19aRJkx577LE/FOT1q1/96tJLLzXrbFBbWwshLDEhrK6urq+vf/zxxwuQX08//fSKFSssKpzFGFlGP+eDOnRI4q+cWGAdy/L2lgjpIWTHCcfvvGRc5K031LuSUhbUOjSqpVMIocomv3/tJYQ33HDDeeedVz7Q1/nnn//www8bArUWQrVbpMvlGlWQV3l5uYUKQgi1kbtLprFMgROsoqLCOsFEKRFSB0nMXO+giRnJ9cNA521Zmf0uobJtw4Y2/e8qrd+44R0KJUJDLLnaaC8hvOWWWyoqKrT7YH8X9PMRpgG0FkKzGqT+GpCr/dUSYUNDQ5oX2qp+0O3Mi6IfoQaqvwt56keoxshwePTM8BVgizhCyLqvKVrokJ3xqVlTxr1UC445+is7TOYBJsQ/dGjoEzYKl2wy2huEsL/f1X7tL5oQrlq1ypCPtRDyc4dSb4KqEB46xAYhMnxBCA2xDH5jXoWwAAqX5SVGjx49efJki5mfB09SO4OAE/PqRlFJjDctEdI4+UoViqEWQgi1jMnHgmhCuHLlSkOM1kKY5e2jYLuNHj26vr7ebCaNPucjRInQMAey2SiIEHq93ilTpgQCgWyYDHKf3AhhZmtPmVK/MkN9/kp42VWcxidAT5ihLxQ6qVJGVEeabv3aV+n+A6xQKEuZ7kAIB5ln1odDCFU+9hLCioqKO+64wyKyKBFawBnMR4IIYUVFxZIlSwYDKvtjcyOE+uupzUtkSnsUIcxOrnRDfOWiIlSraO3r6onBpgkJDSmT33knUwJV1yCE+hDnfBlCqCK1kRBWV1e73e71663GxIAQ5vybop5QHCF8991388Qw7bS5F0L1ApoQJopiOZa6vhTOQR3xh46pe2ob1ZIiie/mdEqESGnzhutUEUKYlje5XYUQqjxtJIQul2vZsmUW9aKoGs3td0R/NhGE0OVy3XrrrdYJpmcyyOU8CmH37NmUkOIKIbt6vD1qovDnULY4U4SQ7UYIfemlFJoQwhQceVyBEKpw7SKELpdrzpw5bW1t1jmBEqE1nwF/WsJCqLYIc7lcs2bNsmiHNWB0ZgfmUQg7b10UTnRRyF+PwGzPzPSPaSHTvDJnQh3jBUdjIdQxQ4lQByP3i/YSwptvvtnlclWbvGqUl0WLlQF3n1DPWVNTY3LlAW7u02DtuqNHj66srCwvL//FL37R2tpK+3pBCPsiNMDP8yqE1cV4qUlYVVXl9XpdLteCBQsKqYKU0rwIoaR0TQ9v29Z51nc7jzyi/YhhHUcc0TmsAO9hnUcMUy6k/j2i8wj2bnU6uolSC1rmZJqX8hgyUVmaUSLUFQgphHCAX9nsDrOXEN50002jRo0yu130qSsDFkL1x7LZdQe8XVXWqqoqC/Guq6sbM2bMZZddNnv27NWrV0cikWwCCyHMhtIA9smHEGq9VAecSIM8sKqqaty4cdOnT3/mmWdCodAAsAzmkJwLoaTvfhBoazm45s/7X3nlwCuvHnzl1QN5f79y4NWXk1d5+dUDr7xy8E+v7n72mZbxF7PWocmaUlUOEyroiFeN6sdY02OFEOpp5HzZXkK4bdu29evXf5z6+uijj9QNGzZsWLlypdk4wrW1tQMWQrW7wttvv5165YGvqTZv2LDho48+uv76681srqmpqaure+GFF/bv3284Eq9ZPkAIzcgMcns+hLC2tnb06NHXXHPNunXrBp5SAz1STcXt27eHw+FBwhnY4TkXwqQZ+hJVcmuxlgKBtnJXlBBWKcoKhfFuFVrpkA3tlvaMUGcqhFAHI/eL9hLCPv1/7733LIaeGbAQejyeGTNm5OlO8dJLL7lcLrNCYUVFxXPPPden42k7QAjTgORqNU9C6PF4CjzotjWQfv3qsj5Vn5/mTAg12dMW+rx2PnawuHrTLb9gzywTDwuV9qLxroRs4yCFsLaOFnBaANrW1n3mdyXVnZSaXlbSlQlpHnk29fkMCUeDgR6Ph/mbcaDKATPUG3LLfuNbb72VDyH0er3XXHONzySs2ZtnuOf27dsvvvhiswpSr9c7Y8aMYDBoeKzZRgihGZlBbs+fEM6bN6+/UR6kL5wcnjMh5MQfxQzJ0JjWe5azEmH63T/RmnSQQlgHITSkntXGEisR2lEIZVmeO3euWe2oWm/24YcfZhXOxE4QwgSJHP8PIcwx0Dw1lsm5lf08oXGxsGW5IoQGWqg8LxykENaOoTFjAe6n8X3urninKxFmNP9BiTBZw1etvDZs2NAn1hzuYEchpJQ++eST1rWjd999d78oQQj7hSv7nSGE2bPKcs+SLBEa+97yy1+yEiGEEFWjxgmSs602FcItW7ZUK6/k7wjdUlVV1eWXX95n30E9RAihnkYOlyGEOYSpnirXQqgWxswaX+bc/IwTphYG48O9qRtbli+PKEKYWYTK0TNCg0FKMwzM0Yb2tp7vKs8InU61f6S+yhfPCLUbeLXyQokwm7QLBoMzZsywqB2tqKh47bXXsjmVug+EMHtW/doTQtgvXNnsnFMhTFWhbC6f831STZBkWdImGmy9WxFCBzEeiXRgVaNKr8QIIb1jamgsmnN39CeU9b61t3WfdWZMLd0qAwVACDXx0y9UV1f/q2PfJ598oieZ72WblggppQ899JDb7dYD1C+73e4bb7wxe3rWQuh2u//whz9kf7bB77lnz57x48drHeb0rqndWh544AHDq/h8Pou51CsrK2+99VbDA/O0MRKJXHfddZWVlYa+eDye2bNn9/b2Zl49EAhY/NbxeDxoLJMJrRS2yLoWuIeWLmWtRp3KDIjpTWYG1mrUKTvYIDURQgKjvVSKJgYcl7V57nMIUdFB1k2TnbOttec/vqUKYWYBFyVC7R5XU1PjdrvXrVuXw0D0eSr7CuHGjRstSoTV1dVjxozZuXNnnwTUHayFsKKiwmxexizP39/d9uzZM27cOLNZ0d1u94CFcNGiRf01ZjD79/b2Tps2zSxSEMIBsM1piTB5/eLVjSZtSF9q9XgS/QgTLUX1cjiwEqHSGUMiJHDKiN6Gg+mXzNt6+2uro0OGyErpVi7TxlOND5oDIdSEsLa21uVy/e53v8tbKAxOnKd+hHntPqG60dXVVV9fP3r0aD1A/bLL5XrqqacMfDbaZC2ElZWVN9xwgyQVpokZs++1117zer2GpajBlAi9Xu/kyZP9fr8Rg7xs+/DDD6uVl6EvEMIBQM+1EGrVd7Lc8fn2A2tea3h9bfHef2l4/Y2Da99s/Mtr3VdfHRk6RFd/qM47Mch+hEqvfCdrgBMlpOv88w698PzBN986uPb1g2tfz5PXB996q/2+e7tGnMxGAFAGEGdCqFd09CPU37lra2tqasaOHfvkk09uKdTriSeeqKysTLUiuTbgDvUFEEJK6YoVK8rLy5Pmpi6pNmTZqV8TQsP7tdol49577928eXMBIvPqq69OmjTJQuMHXCJUHVm0aNEnn3yyZcuWzz77LK/urF69+sorr7RwBELIgRAmTJAp3T933k5CdpeVFeu9p8ypXHrIHqfTZ9peNF46lAmRLUaW2bGj+ZQRpi1OmQ6RCCH7HY5defR3iErysIEvKQPlSIQ0n3029XUmopHyf6l2qFeH4ky9b8fX1MnzKgr1MquzUq3hXAjfeuut0aNHm0mXOjCp9TSEWrZpQmgYlFrlN0plZWWhwlJhOFyAljaDEcLa2lqPx1MwRyxUsLa21uv14hmhloRZLuS6RJi4rExpYM4cphz8vNkMhfpK0RTxUITw5YT58f9Z+VZ9NLdzZ0IIM7vk6wpkBXM2tQiYNmKcUjU6kvq60txRV0tPCJ988slRo0aZ3W152865EHZ2dk6aNMlQM1SS5eXl9957r2FqpW1UhdBMUzmMy8CeEXLlSE1Njcfj+dnPfobGMmnZaL2aRyHsLt4M9WlVhYlVKyFkgv1i6nyEqggqjTXZWKMj1BKhpRCm65NOIwv4kUxIy8iRGGKNqzuUZgznQkgpvfPOOy2GiKuqqpo4cWJ7e7v1nYVS+umnn7pcrhIQwq6uLotWo1pkOVnweDzXXXcdhLDP/NTvIJAQZrauVAQy8aSNEPrqqwqalH4KlLKH+dKOHYf7qBotjuYlND7l6hIhjd8/h3Z36yOtLZdkidBiSBRObk+aGfwL4euvv24hhDU1NZWVlatXr9YyymxBFUK1CpR/OXS73b/+9a8NffH5fOPHjzdrbqpFlpMFj8czd+5cwyFD0X3CML75mo9QrVDkr0SYVAul20OZpiIyIb7jhtN//INZznQwvSVb7NChvd843fIZYfLk2mmLtSATsrumhrI+lAav0hPCNWvWeDwe/m+16o2SfyFsamqaOHGixYMot9u9cOHCaLSPjrPbtm1TnylyohCGZmjPCCsqKh599FGDLwylfr9/4sSJFtXFhmcu1sby8vK77rrL0BEIoSEWcYWQSZRTmaSXzcrklAg54HLRYHI2SK31q/qMMBoK7TvvPH6FUJlqkRV5lQ7+MUI67/qlWchLTwg3bNhQV1cHITSL+AC2L1y40KJnvTpD4a5du6zPfPjw4SuvvNIu+jFq1CizcXPC4fD8+fO9Xm+xtK1f13W73S+/nN7cQY0UhNAsYwWqGk0vnylCyMSDkCAhnS+rDwiNe0BKlHZdf31CCNUWNzw9LNSEUJlPqvMrJ0r79pmFvPSEsLOz8/LLL7fLDZf/EiGl9OWXX3a5XFppKfNGXF5e/vvf/94sx9TtsizfeOONFoKaedpibamqqho7duyePXvMPHrkkUfU6nc+f2+pkaqrq/N4PFdddZXZXF0QQrP4iimEZawUWOaQFBWMENI4dy5l9TwypTGlXpRVKiYLhUpNafiD9b6jjkxoIUcVoYrAswFuaBkT9a6yIc1/eEKJNxP1tAeelNLSE0JK6cMPP3zhhRcW6zbar+vaQgj37NkzduzY6upqMy30eDzTp083fBClv9esWbPGFu1lLrroottvv92id/+WLVvU/oL9inUhd66rq/N6vVVVVe+9954+BPplCKGehn5ZTCF0UqKMqUZIJyEt111Lk6NCaKOkJSgxPVQGLJXlpjvuaEl2kHCwkxSwLajVtRSrZEL2fflLHatWJVRcJ+UJb0pMCDWd7+rqWrBgwUUXXcR/udAWQhiNRhcsWFBZWWkohOqTP6/X+9FHH+kyy2AxFoutWLHC5XJxW69YXV09atSo6dOnt7S0GDig2/T0009XVFSYjfBZSM1Lu5b6XKC8vHz8+PFr167VmZy+GAgEpk+fbtbPFWONpvMa/LpMqW/GDFZ+4ubNhmJR3pJSF9pEyO4zzgg98OtoNGLgryYi6oJSsIpJUvSxxxp/8IPdRw7rJCRECJsjnhDtzAV2Vr0uG9SGkF3HHN05dkzkr2/FDJxJ2RQNBPwX/B8LU2PHHRs5fCjlmNysGFc7U0oPT5hgYQ/7aOsWxQQtKvryety4zs7Ohx9+eMKECR6P51/ji1ZUVJRz+Tr//PMffvhhQ6Lt7e2TJk368Y9/bGj4j3/845/85CddXcbdQw1POJiNjz322Pnnn29oibrxvPPOW7ZsmfZbxOxasVjsueeemzx5ssfjUbvPW5yzYB9VVFS43e7KysqLL774nnvuOXQoq4Rfu3bt1KlTvV6v2n1etdblchXMbMMrqsMYLV26dOvWrWZRULcHAoH6+voLLrjA0OALLrhg5syZfZbyrS9h00/zWCLsXbWK1tXRMWM4ectjxtCxY+iYutj48dFrr+1ZubJr397kndU6gLp7eE9ra9fqPwVvuy06a1Zs3Hg6Ziw7s/quUxfq6Ji8Oy7X1clj6+S6OumKK0OLb+v8299CcUWXDFSCeRf3NRYKB5YsToYmbvNYqizIdXWxn14d7TIelcYaUl+fpjfH1e6hXb++P2mPBjOOtI591HAgrZ7XLHAtLS3vvPPOE088cd999y1duvR25bWMp9ett95q9rO9u7v7wQcfvO22226//fZMkxcvXvyb3/zGsH9YX+QH8vmePXuWLFmybNkyQ2OWLVu2ZMmS++67LxAIZHN2n8/38ccfP/PMMw8++GCmawXesnTp0nvuuWfVqlWvvfZaY2NjNvZr+/T09GzatOn5559/5JFH7rzzzgJbrr/c7bffvnTp0nvvvffFF1/cvXu3ZqHFQjgc/tePsMWLF+vPoy0vXrx41apVWY6fZ3EVO36URyG0Cw5lqia7GBu3U5UBIzFIFxudY0pvCqNjdPsUblFTQW3B4tqK1dyYbmGowB9lE0eB8cB1rgnkRwjZNETc3bbYlEw6q/TL/Q1R4ti4j/mYdCkrk+LXT865qPSDtDxUKVjFS4cGIZLZzwKD7Zbn7O+HifMrAUkx3vxMkso8Qd58Rzt/Utre2Tky6bYjUulEbL6eKyFM6butyQ2H6aLZprSoVGfu7XcMtTs50/vESr/PMqADdHW08eP1kHXWMIFRfo+Y22f0CTsbO8zoswEZnJODVHuUv4ph7E9KyuXkKjjJIAnwljaDdMdehwP+YOKVIyHU3zb1y4MxLV/HZlkEMb580jlVkRLrif+Nj8rh1kwhtDh5v3a2OE/uPrKouc3dRXAmEAABEOgPgTwIYX8uX4x9C6ZZxXCOXTNZVMoUQg6cH4QJmf4UizGuCwIgUEIEciSEyTaJjA2v96v4LVh3Jx6ApcrRulMUuGo0i9zTGWfpX+qHqWtZXKZguySIq36pdup8LJgduBAIgECJEsirEPJ2t4rbozNrAHd/5WjdKfgTQl2qWvqX+mHqmu4cBVnUA02/YIK4uo9qp9X+6cdjHQRAAAQsCeROCNMvw/HToEHeS5M34eKKh9YzMB192nqKvWmfFb78rslZ0pKBpkrSseS5sAQCIAAC/SWQPyHsryXYHwRAAARAAASKQABCWATouCQIgAAIgAA/BCCE/MQCloAACIAACBSBAISwCNBxSRAAARAAAX4IQAj5iQUsAQEQAAEQKAIBCGERoOOSIAACIAAC/BCAEPITC1gCAiAAAiBQBAIQwiJAxyVBAARAAAT4IQAh5CcWsAQEQAAEQKAIBCCERYCOS4IACIAACPBDAELITyxgCQiAAAiAQBEIQAiLAB2XBAEQAAEQ4IcAhJCfWMASEAABEACBIhCAEBYBOi4JAiAAAiDADwEIIT+xgCUgAAIgAAJFIAAhLAJ0XBIEQAAEQIAfAhBCfmIBS0AABEAABIpAAEJYBOi4JAiAAAiAAD8EIIT8xAKWgAAIgAAIFIEAhLAI0HFJEAABEAABfghACPmJBSwBARAAgXQCkiRHo1I4EguFo4FgpDcY6QlEugNhf2/YZ/L294a7A+HeQCQQjARD0VA4GonEojFJkuT0s2NdIQAhRCKAAAiAAAgITQBCKHT44TwIgAAIgACEEDkAAiAAAiAgNAEIodDhh/MgAAIgAAIQQuQACIAACICA0AQghEKHH86DAAiAAAhACJEDIAACIAACQhOAEAodfjgPAiAAAiAAIUQOgAAIgAAICE0AQih0+OE8CIAACIAAhBA5AAIgAAIgIDQBCKHQ4YfzIAACIAACEELkAAiAAAiAgNAEIIRChx/OgwAIgAAIPM+AMgAABW1JREFUQAiRAyAAAiAAAkITgBAKHX44DwIgAAIgACFEDoAACIAACAhNAEIodPjhPAiAAAiAAIQQOQACIAACICA0AQih0OGH8yAAAiAAAhBC5AAIgAAIgIDQBCCEQocfzoMACIAACEAIkQMgAAIgAAJCE4AQCh1+OA8CIAACIAAhRA6AAAiAAAgITQBCKHT44TwIgAAIgACEEDkAAiAAAiAgNAEIodDhh/MgAAIgAAIQQuQACIAACICA0AQghEKHH86DAAiAAAhACJEDIAACIAACQhOAEAodfjgPAiAAAiAAIUQOgAAIgAAICE0AQih0+OE8CIAACIAAhBA5AAIgAAIgIDQBCKHQ4YfzIAACIAACEELkAAiAAAiAgNAEIIRChx/OgwAIgAAIQAiRAyAAAiAAAkITgBAKHX44DwIgAAIgACFEDoAACIAACAhNAEIodPjhPAiAAAiAAIQQOQACIAACICA0AQih0OGH8yAAAiAAAhBC5AAIgAAIgIDQBCCEQocfzoMACIAACEAIkQMgAAIgAAJCE4AQCh1+OA8CIAACIAAhRA6AAAiAAAgITQBCKHT44TwIgAAIgACEEDkAAiAAAiAgNAEIodDhh/MgAAIgAAIQQuQACIAACICA0AQghEKHH86DAAiAAAhACJEDIAACIAACQhOAEAodfjgPAiAAAiAAIUQOgAAIgAAICE0AQih0+OE8CIAACIAAhBA5AAIgAAIgIDQBCKHQ4YfzIAACIAACEELkAAiAAAiAgNAEIIRChx/OgwAIgAAIQAiRAyAAAiAAAkITgBAKHX44DwIgAAIgACFEDoAACIAACAhNAEIodPjhPAiAAAiAAIQQOQACIAACICA0AQih0OGH8yAAAiAAAhBC5AAIgAAIgIDQBCCEQocfzoMACIAACEAIkQMgAAIgAAJCE4AQCh1+OA8CIAACIAAhRA6AAAiAAAgITQBCKHT44TwIgAAIgACEEDkAAiAAAiAgNAEIodDhh/MgAAIgAAIQQuQACIAACICA0AQghEKHH86DAAiAAAhACJEDIAACIAACQhOAEAodfjgPAiAAAiAAIUQOgAAIgAAICE0AQih0+OE8CIAACIAAhBA5AAIgAAIgIDQBCKHQ4YfzIAACIAACEELkAAiAAAiAgNAEIIRChx/OgwAIgAAIQAiRAyAAAiAAAkITgBAKHX44DwIgAAIgACFEDoAACIAACAhNAEIodPjhPAiAAAiAAIQQOQACIAACICA0AQih0OGH8yAAAiAAAhBC5AAIgAAIgIDQBCCEQocfzoMACIAACEAIkQMgAAIgAAJCE4AQCh1+OA8CIAACIAAhRA6AAAiAAAgITQBCKHT44TwIgAAIgACEEDkAAiAAAiAgNAEIodDhh/MgAAIgAAIQQuQACIAACICA0AQghEKHH86DAAiAAAhACJEDIAACIAACQhOAEAodfjgPAiAAAiAAIUQOgAAIgAAICE0AQih0+OE8CIAACIAAhBA5AAIgAAIgIDQBCKHQ4YfzIAACIAACEELkAAiAAAiAgNAEIIRChx/OgwAIgAAIQAiRAyAAAiAAAkITgBAKHX44DwIgAAIgACFEDoAACIAACAhNAEIodPjhPAiAAAiAAIQQOQACIAACICA0AQih0OGH8yAAAiAAAhBC5AAIgAAIgIDQBCCEQocfzoMACIAACEAIkQMgAAIgAAJCE4AQCh1+OA8CIAACIAAhRA6AAAiAAAgITQBCKHT44TwIgAAIgACEEDkAAiAAAiAgNAEIodDhh/MgAAIgAAIQQuQACIAACICA0AQghEKHH86DAAiAAAhACJEDIAACIAACQhOAEAodfjgPAiAAAiDw/wHtrDnUjCdNrwAAAABJRU5ErkJggg==";
 const MONTH_NAMES = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+const MONTH_FULL_NAMES = ["", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+  "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
+// ---- ตัวช่วยกรองข้อมูลตามแผนก (deptId ว่าง = ไม่กรอง = เห็นทุกแผนก) ----
+// แผน/พนักงาน: ต้องเป็นแผนกเดียวกัน
+const deptEq = (query, deptId, col = "department_id") => (deptId ? query.eq(col, deptId) : query);
+// ข้อสอบ/หลักสูตร: แผนกเดียวกัน หรือ "กลาง" (department_id ว่าง)
+const deptOrCentral = (query, deptId) =>
+  deptId ? query.or("department_id.eq." + deptId + ",department_id.is.null") : query;
+
+// วันที่ "YYYY-MM-DD" → "8 ต.ค. 2569" (ไม่แปลงโซนเวลา กันวันเลื่อน)
+const formatThaiDate = (iso) => {
+  if (!iso) return "-";
+  const [y, m, d] = String(iso).slice(0, 10).split("-").map((x) => parseInt(x, 10));
+  if (!y || !m || !d) return String(iso);
+  return d + " " + MONTH_NAMES[m] + " " + (y + 543);
+};
 
 // ---- สำหรับปุ่ม Export/Backup (Admin) - เชื่อมกับ Apps Script Web App ----
 const BACKUP_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyp4xLGE9x0GxIlHAmtbw_Obp_HTyiV_tDe5wwLEjP1zzooPU7n9hNI0uekL-ZWBz9e/exec";
@@ -589,7 +673,7 @@ function LoginPage({ onLogin }) {
         >
           <i className="ti ti-clipboard-check" aria-hidden="true"></i>
         </div>
-        <h2 style={{ margin: 0 }}>ระบบข้อสอบ QPT</h2>
+        <h2 style={{ margin: 0 }}>ระบบข้อสอบ QA</h2>
         <p style={{ color: "var(--ink-soft)", fontSize: 14, marginTop: 6 }}>
           กรอกรหัสพนักงานเพื่อเข้าสู่ระบบ
         </p>
@@ -618,8 +702,8 @@ function LoginPage({ onLogin }) {
 }
 
 // ---- หน้าปฏิทินอบรม (แอดมิน) ----
-function AdminCalendarPage({ role }) {
-  const [year] = useState(2026);
+function AdminCalendarPage({ role, deptId, departments, me }) {
+  const [year] = useState(new Date().getFullYear());
   const [calendarRows, setCalendarRows] = useState([]);
   const [materialsByCourse, setMaterialsByCourse] = useState({});
   const [examsByCourse, setExamsByCourse] = useState({});
@@ -639,6 +723,17 @@ function AdminCalendarPage({ role }) {
   const [backupMessage, setBackupMessage] = useState("");
   const [backupUrl, setBackupUrl] = useState("");
   const [lastBackupRunAt, setLastBackupRunAt] = useState(null); // Date | null
+  // ---- รอบการอบรม + การเข้าอบรม ของหลักสูตรที่เปิดดูอยู่ ----
+  const [entrySessions, setEntrySessions] = useState([]); // [{id, session_date, shift, foreman_id, trainerName}]
+  const [attendanceByEmp, setAttendanceByEmp] = useState({}); // empId -> [{session_id, status, note}]
+  // ---- ฟอร์มสร้าง session อบรมซ่อม (คนที่ขาด) ----
+  const [showMakeup, setShowMakeup] = useState(false);
+  const [makeupDate, setMakeupDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [makeupShift, setMakeupShift] = useState("");
+  const [makeupSelected, setMakeupSelected] = useState({}); // empId -> true
+  const [makeupSaving, setMakeupSaving] = useState(false);
+  const [makeupMsg, setMakeupMsg] = useState("");
+  const deptCode = ((departments || []).find((d) => d.id === deptId) || {}).code || "";
 
   useEffect(() => {
     loadAll();
@@ -683,13 +778,16 @@ function AdminCalendarPage({ role }) {
   const loadAll = async () => {
     setLoading(true);
     const [calRes, matRes, examRes] = await Promise.all([
-      supabaseClient
-        .from("training_calendar")
-        .select("id, year, month, course_id, courses(name)")
-        .eq("year", year)
-        .order("month"),
+      deptEq(
+        supabaseClient
+          .from("training_calendar")
+          .select("id, year, month, course_id, courses(name)")
+          .eq("year", year)
+          .order("month"),
+        deptId
+      ),
       supabaseClient.from("course_materials").select("course_id"),
-      supabaseClient.from("exams").select("id, course_id"),
+      deptOrCentral(supabaseClient.from("exams").select("id, course_id"), deptId),
     ]);
 
     setCalendarRows(calRes.data || []);
@@ -707,7 +805,10 @@ function AdminCalendarPage({ role }) {
     setExamsByCourse(examCount);
 
     if (calRes.data && calRes.data.length > 0 && selectedMonth === null) {
-      setSelectedMonth(calRes.data[0].month);
+      // เปิดเดือนปัจจุบันก่อน ถ้ามีแผน ไม่งั้นเดือนแรกที่มี
+      const thisMonth = new Date().getMonth() + 1;
+      const hasThisMonth = calRes.data.some((r) => r.month === thisMonth);
+      setSelectedMonth(hasThisMonth ? thisMonth : calRes.data[0].month);
     }
     setLoading(false);
   };
@@ -716,30 +817,64 @@ function AdminCalendarPage({ role }) {
     setSelectedEntry(entry);
     setPrintSessionInfo(null);
     setPrintShift("");
-    const [compRes, examRes, empRes, shiftRes] = await Promise.all([
+    setShowMakeup(false);
+    setMakeupMsg("");
+    const [compRes, examRes, empRes, sessRes] = await Promise.all([
       supabaseClient
         .from("v_course_completion")
         .select("employee_id, employee_name, employee_code, total_exams, passed_exams, completed")
         .eq("calendar_id", entry.id)
         .order("employee_name"),
-      supabaseClient
-        .from("exams")
-        .select("id, exam_name")
-        .eq("course_id", entry.course_id),
-      supabaseClient
-        .from("employees")
-        .select("id, employee_code, name, role")
-        .eq("active", true)
-        .order("name"),
+      deptOrCentral(
+        supabaseClient
+          .from("exams")
+          .select("id, exam_name")
+          .eq("course_id", entry.course_id),
+        deptId
+      ),
+      deptEq(
+        supabaseClient
+          .from("employees")
+          .select("id, employee_code, name, role, shift")
+          .eq("active", true)
+          .order("name"),
+        deptId
+      ),
       supabaseClient
         .from("training_sessions")
-        .select("shift")
-        .eq("calendar_id", entry.id),
+        .select("id, session_date, shift, foreman_id")
+        .eq("calendar_id", entry.id)
+        .order("session_date", { ascending: true }),
     ]);
     setCompletionRows(compRes.data || []);
     setAllEmployees(empRes.data || []);
 
-    const shifts = [...new Set((shiftRes.data || []).map((s) => s.shift).filter(Boolean))].sort();
+    // ---- รอบการอบรม: ผู้อบรม = คนที่สร้าง session (foreman_id) + ใครเข้าอบรมบ้าง ----
+    const sessList = sessRes.data || [];
+    const trainerIds = [...new Set(sessList.map((s) => s.foreman_id).filter(Boolean))];
+    const sessionIds = sessList.map((s) => s.id);
+    const [trainerRes, attRes] = await Promise.all([
+      trainerIds.length > 0
+        ? supabaseClient.from("employees").select("id, name").in("id", trainerIds)
+        : Promise.resolve({ data: [] }),
+      sessionIds.length > 0
+        ? supabaseClient
+            .from("session_attendance")
+            .select("session_id, employee_id, status, note")
+            .in("session_id", sessionIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+    const trainerName = {};
+    (trainerRes.data || []).forEach((t) => { trainerName[t.id] = t.name; });
+    setEntrySessions(sessList.map((s) => ({ ...s, trainerName: trainerName[s.foreman_id] || "-" })));
+    const attMap = {};
+    (attRes.data || []).forEach((a) => {
+      if (!attMap[a.employee_id]) attMap[a.employee_id] = [];
+      attMap[a.employee_id].push(a);
+    });
+    setAttendanceByEmp(attMap);
+
+    const shifts = [...new Set(sessList.map((s) => s.shift).filter(Boolean))].sort();
     setAvailableShifts(shifts);
 
     const examIds = (examRes.data || []).map((e) => e.id);
@@ -841,6 +976,72 @@ function AdminCalendarPage({ role }) {
     loadPrintData(selectedEntry, shift);
   };
 
+  // ---- เปิดฟอร์มอบรมซ่อม: เลือกทุกคนที่ขาดไว้ก่อน + เดากะจากกะที่คนขาดมากที่สุด ----
+  const openMakeup = (absentRows) => {
+    const sel = {};
+    absentRows.forEach((r) => { sel[r.employee_id] = true; });
+    setMakeupSelected(sel);
+    const shiftCount = {};
+    absentRows.forEach((r) => {
+      if (r.shift) shiftCount[r.shift] = (shiftCount[r.shift] || 0) + 1;
+    });
+    const best = Object.keys(shiftCount).sort((a, b) => shiftCount[b] - shiftCount[a])[0];
+    setMakeupShift(best || (me && me.shift) || "");
+    setMakeupDate(new Date().toISOString().slice(0, 10));
+    setMakeupMsg("");
+    setShowMakeup(true);
+  };
+
+  // ---- สร้าง session อบรมซ่อม แล้วบันทึกคนที่ติ๊กว่า "มา" ----
+  const createMakeupSession = async () => {
+    const chosen = Object.keys(makeupSelected).filter((id) => makeupSelected[id]);
+    if (!makeupDate || !makeupShift) {
+      setMakeupMsg("กรุณาเลือกวันที่และกะ");
+      return;
+    }
+    if (chosen.length === 0) {
+      setMakeupMsg("กรุณาติ๊กคนที่เข้าอบรมอย่างน้อย 1 คน");
+      return;
+    }
+    setMakeupSaving(true);
+    setMakeupMsg("");
+    const { data: sess, error } = await supabaseClient
+      .from("training_sessions")
+      .insert({
+        calendar_id: selectedEntry.id,
+        foreman_id: me ? me.id : null,
+        session_date: makeupDate,
+        shift: makeupShift,
+      })
+      .select()
+      .single();
+    if (error) {
+      setMakeupSaving(false);
+      setMakeupMsg("สร้าง session ไม่สำเร็จ: " + error.message);
+      return;
+    }
+    const confirmedAt = new Date().toISOString();
+    const rows = chosen.map((employee_id) => ({
+      session_id: sess.id,
+      employee_id,
+      status: "present",
+      note: "อบรมซ่อม",
+      confirmed_at: confirmedAt,
+    }));
+    const { error: attErr } = await supabaseClient
+      .from("session_attendance")
+      .upsert(rows, { onConflict: "session_id,employee_id" });
+    setMakeupSaving(false);
+    setShowMakeup(false);
+    setMakeupSelected({});
+    await openEntry(selectedEntry);
+    if (attErr) {
+      setMakeupMsg("สร้าง session แล้ว แต่บันทึกรายชื่อไม่สำเร็จ: " + attErr.message + " (เช็คชื่อต่อได้ที่เมนู \"งานของฉัน\")");
+    } else {
+      setMakeupMsg("✓ สร้าง session อบรมซ่อม และบันทึกผู้เข้าอบรม " + rows.length + " คนแล้ว");
+    }
+  };
+
   if (loading) return <div className="page">กำลังโหลดปฏิทิน...</div>;
 
   const months = [...new Set(calendarRows.map((r) => r.month))].sort((a, b) => a - b);
@@ -875,6 +1076,61 @@ function AdminCalendarPage({ role }) {
         passed,
       };
     });
+
+    // ---- แยกกลุ่ม "เข้าอบรมแล้ว" / "ขาดอบรม" จากการเช็คชื่อใน session ของแผนนี้ ----
+    const empById = {};
+    allEmployees.forEach((e) => { empById[e.id] = e; });
+    // view อาจคืนพนักงานทุกแผนก (กรณียังไม่ได้อัปเดต view) จึงกรองเหลือเฉพาะแผนกที่ดูอยู่
+    const rosterRows = allEmployees.length > 0
+      ? completionRows.filter((r) => empById[r.employee_id])
+      : completionRows;
+    const sessById = {};
+    entrySessions.forEach((sess) => { sessById[sess.id] = sess; });
+    const classifyAttendance = (empId) => {
+      const recs = attendanceByEmp[empId] || [];
+      const present = recs.filter((a) => a.status === "present");
+      if (present.length > 0) {
+        return { group: "attended", sessions: present.map((a) => sessById[a.session_id]).filter(Boolean) };
+      }
+      if (recs.length > 0) {
+        return { group: "absent", label: "ขาด", note: recs.map((a) => a.note).filter(Boolean).join(", ") };
+      }
+      return { group: "absent", label: "ยังไม่ได้เช็คชื่อ", note: "" };
+    };
+    const enrichedRows = rosterRows.map((r) => ({
+      ...r,
+      shift: (empById[r.employee_id] || {}).shift || "",
+      att: classifyAttendance(r.employee_id),
+    }));
+    const attendedRows = enrichedRows.filter((r) => r.att.group === "attended");
+    const absentRows = enrichedRows.filter((r) => r.att.group === "absent");
+    const shiftOptionsAll = [...new Set(allEmployees.map((e) => e.shift).filter(Boolean))].sort();
+    const canCreateMakeup = role === "admin" || role === "foreman";
+
+    // ช่องคะแนน/ผ่าน/สถานะ (ใช้ร่วมกันทั้ง 2 ตาราง) — ตัดสินจากคะแนนล่าสุดที่เห็นจริง
+    const renderScoreCells = (r) => {
+      const scores = scoresByEmployee[r.employee_id] || {};
+      const scoreEntries = Object.entries(scores);
+      const passedCount = scoreEntries.filter(([, sc]) => sc.passed === true).length;
+      const isCompleted = r.total_exams > 0 && passedCount === r.total_exams;
+      return (
+        <React.Fragment>
+          <td>
+            {scoreEntries.length === 0 ? (
+              <span style={{ color: "var(--ink-soft)" }}>ยังไม่สอบ</span>
+            ) : (
+              scoreEntries.map(([examId, sc], j) => (
+                <div key={j}>{sc.raw_score} / {sc.max_score}</div>
+              ))
+            )}
+          </td>
+          <td>{passedCount} / {r.total_exams}</td>
+          <td className={isCompleted ? "pass" : "fail"}>
+            {r.total_exams === 0 ? "ยังไม่มีข้อสอบ" : isCompleted ? "ผ่านครบ" : "ยังไม่ผ่าน"}
+          </td>
+        </React.Fragment>
+      );
+    };
 
     return (
       <div className="page">
@@ -930,46 +1186,171 @@ function AdminCalendarPage({ role }) {
             ข้อสอบ {examCount} ชุด
           </span>
 
-          <h3 style={{ marginTop: 24 }}>คะแนนพนักงาน</h3>
-          {completionRows.length === 0 ? (
-            <p style={{ color: "#667085" }}>ยังไม่มีใครทำข้อสอบในรอบนี้</p>
+          {/* ---- รอบการอบรม + ผู้อบรม (คนที่สร้าง session) ---- */}
+          <div className="section-title" style={{ marginTop: 24 }}>
+            <i className="ti ti-presentation" aria-hidden="true"></i>
+            รอบการอบรมและผู้อบรม
+          </div>
+          {entrySessions.length === 0 ? (
+            <p style={{ color: "var(--ink-soft)", fontSize: 14 }}>ยังไม่มีรอบการอบรมในระบบสำหรับหลักสูตรนี้</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>วันที่อบรม</th>
+                  <th>กะ</th>
+                  <th>ผู้อบรม</th>
+                  <th>ผู้เข้าอบรม</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entrySessions.map((sess) => {
+                  const presentCount = Object.values(attendanceByEmp).filter((list) =>
+                    list.some((a) => a.session_id === sess.id && a.status === "present")
+                  ).length;
+                  return (
+                    <tr key={sess.id}>
+                      <td>{formatThaiDate(sess.session_date)}</td>
+                      <td>{sess.shift || "-"}</td>
+                      <td>{sess.trainerName}</td>
+                      <td>{presentCount} คน</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {makeupMsg && (
+            <p style={{ marginTop: 14, fontSize: 14, color: makeupMsg.startsWith("✓") ? "var(--success-dark)" : "var(--danger)" }}>
+              {makeupMsg}
+            </p>
+          )}
+
+          {/* ---- กลุ่มที่ 1: เข้าอบรมแล้ว ---- */}
+          <h3 style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 8 }}>
+            <i className="ti ti-user-check" style={{ color: "var(--success)" }} aria-hidden="true"></i>
+            เข้าอบรมแล้ว ({attendedRows.length} คน)
+          </h3>
+          {attendedRows.length === 0 ? (
+            <p style={{ color: "var(--ink-soft)", fontSize: 14 }}>ยังไม่มีใครถูกเช็คชื่อว่าเข้าอบรม</p>
           ) : (
             <table>
               <thead>
                 <tr>
                   <th>รหัส</th>
                   <th>ชื่อ</th>
+                  <th>อบรมเมื่อ / ผู้อบรม</th>
                   <th>คะแนน</th>
                   <th>ผ่าน/ทั้งหมด</th>
-                  <th>สถานะ</th>
+                  <th>สถานะสอบ</th>
                 </tr>
               </thead>
               <tbody>
-                {completionRows.map((r, i) => {
-                  const scores = scoresByEmployee[r.employee_id] || {};
-                  const scoreEntries = Object.entries(scores);
-                  const passedCount = scoreEntries.filter(([, s]) => s.passed === true).length;
-                  const isCompleted = r.total_exams > 0 && passedCount === r.total_exams;
-                  return (
-                    <tr key={i}>
-                      <td>{r.employee_code}</td>
-                      <td>{r.employee_name}</td>
-                      <td>
-                        {scoreEntries.length === 0 ? (
-                          <span style={{ color: "var(--ink-soft)" }}>ยังไม่สอบ</span>
-                        ) : (
-                          scoreEntries.map(([examId, s], j) => (
-                            <div key={j}>{s.raw_score} / {s.max_score}</div>
-                          ))
-                        )}
-                      </td>
-                      <td>{passedCount} / {r.total_exams}</td>
-                      <td className={isCompleted ? "pass" : "fail"}>
-                        {isCompleted ? "ผ่านครบ" : "ยังไม่ผ่าน"}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {attendedRows.map((r) => (
+                  <tr key={r.employee_id}>
+                    <td>{r.employee_code}</td>
+                    <td>{r.employee_name}</td>
+                    <td>
+                      {r.att.sessions.map((sess, j) => (
+                        <div key={j} style={{ fontSize: 13 }}>
+                          {formatThaiDate(sess.session_date)} · กะ {sess.shift || "-"} · {sess.trainerName}
+                        </div>
+                      ))}
+                    </td>
+                    {renderScoreCells(r)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {/* ---- กลุ่มที่ 2: ขาดอบรม / ยังไม่ได้เช็คชื่อ ---- */}
+          <div className="header-row" style={{ marginTop: 28 }}>
+            <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+              <i className="ti ti-user-x" style={{ color: "var(--danger)" }} aria-hidden="true"></i>
+              ขาดอบรม ({absentRows.length} คน)
+            </h3>
+            {canCreateMakeup && absentRows.length > 0 && !showMakeup && (
+              <button onClick={() => openMakeup(absentRows)}>
+                <i className="ti ti-calendar-plus" aria-hidden="true"></i> สร้าง session อบรมคนที่ขาด
+              </button>
+            )}
+          </div>
+          {entrySessions.length === 0 && absentRows.length > 0 && (
+            <p style={{ color: "var(--warn)", fontSize: 13 }}>
+              หมายเหตุ: หลักสูตรนี้ยังไม่มีรอบการอบรมในระบบ ทุกคนจึงอยู่ในกลุ่มนี้
+            </p>
+          )}
+
+          {showMakeup && (
+            <div style={{ marginTop: 12, padding: 16, borderRadius: 14, background: "var(--accent-bg)", border: "1px dashed var(--accent)" }}>
+              <div style={{ fontWeight: 600, fontSize: 14, color: "var(--accent-dark)", marginBottom: 10 }}>
+                สร้าง session อบรมซ่อม (ผู้อบรม: {me ? me.name : "-"})
+              </div>
+              <div className="new-session-row">
+                <input type="date" value={makeupDate} onChange={(e) => setMakeupDate(e.target.value)} />
+                <select value={makeupShift} onChange={(e) => setMakeupShift(e.target.value)}>
+                  <option value="" disabled>เลือกกะ</option>
+                  {shiftOptionsAll.map((sh) => (
+                    <option key={sh} value={sh}>กะ {sh}</option>
+                  ))}
+                </select>
+              </div>
+              <p style={{ fontSize: 13, color: "var(--accent-dark)", margin: "12px 0 6px" }}>
+                ติ๊กคนที่มาเข้าอบรมรอบนี้ (คนที่ไม่ติ๊ก จะยังอยู่ในกลุ่มขาดอบรม)
+              </p>
+              {absentRows.map((r) => (
+                <label key={r.employee_id} className="attendance-row" style={{ cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={!!makeupSelected[r.employee_id]}
+                    onChange={(e) => setMakeupSelected({ ...makeupSelected, [r.employee_id]: e.target.checked })}
+                    style={{ width: 18, height: 18, margin: 0 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div className="name">{r.employee_name}</div>
+                    <div className="meta">{r.employee_code}{r.shift ? " · กะ " + r.shift : ""}</div>
+                  </div>
+                </label>
+              ))}
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <button onClick={createMakeupSession} disabled={makeupSaving}>
+                  {makeupSaving ? "กำลังบันทึก..." : "สร้าง session + บันทึกผู้เข้าอบรม"}
+                </button>
+                <button className="secondary" onClick={() => setShowMakeup(false)} disabled={makeupSaving}>
+                  ยกเลิก
+                </button>
+              </div>
+            </div>
+          )}
+
+          {absentRows.length === 0 ? (
+            <p style={{ color: "var(--ink-soft)", fontSize: 14 }}>ไม่มีคนขาดอบรม 🎉</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>รหัส</th>
+                  <th>ชื่อ</th>
+                  <th>การเข้าอบรม</th>
+                  <th>คะแนน</th>
+                  <th>ผ่าน/ทั้งหมด</th>
+                  <th>สถานะสอบ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {absentRows.map((r) => (
+                  <tr key={r.employee_id}>
+                    <td>{r.employee_code}</td>
+                    <td>{r.employee_name}</td>
+                    <td>
+                      <span className={"badge " + (r.att.label === "ขาด" ? "fail" : "warn")}>{r.att.label}</span>
+                      {r.att.note && <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>{r.att.note}</div>}
+                    </td>
+                    {renderScoreCells(r)}
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
@@ -1054,7 +1435,7 @@ function AdminCalendarPage({ role }) {
                   <td>{i + 1}</td>
                   <td>{r.code}</td>
                   <td className="name-cell">{r.name}</td>
-                  <td>QPT/QA</td>
+                  <td>{deptCode ? deptCode + "/QA" : "QA"}</td>
                   <td>{r.scoreText}</td>
                   <td>{r.passed ? "✓" : ""}</td>
                   <td>{r.name ? r.name.split(" ")[0] : ""}</td>
@@ -1166,8 +1547,11 @@ function AdminCalendarPage({ role }) {
 }
 
 // ---- หน้าวางแผนอบรมรายปี (แอดมิน) ----
-function AnnualPlannerPage() {
-  const [year, setYear] = useState(2026);
+function AnnualPlannerPage({ deptId, departments }) {
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState(null); // null = ภาพรวม 12 เดือน, 1-12 = ปฏิทินเดือนนั้น
+  const [yearSessions, setYearSessions] = useState([]); // session อบรมจริงของปีนี้ (ใช้ลงปฏิทินรายวัน)
+  const myDeptInfo = (departments || []).find((d) => d.id === deptId) || null;
   const [courses, setCourses] = useState([]);
   const [calendarRows, setCalendarRows] = useState([]);
   const [materialsByCourse, setMaterialsByCourse] = useState({});
@@ -1210,18 +1594,32 @@ function AnnualPlannerPage() {
     setLoading(true);
     setSaveError("");
     const [courseRes, calRes, matRes, examRes] = await Promise.all([
-      supabaseClient.from("courses").select("id, name, hide_from_unplanned").order("name"),
-      supabaseClient
-        .from("training_calendar")
-        .select("id, year, month, course_id, courses(name)")
-        .eq("year", year)
-        .order("month"),
+      deptOrCentral(supabaseClient.from("courses").select("id, name, hide_from_unplanned").order("name"), deptId),
+      deptEq(
+        supabaseClient
+          .from("training_calendar")
+          .select("id, year, month, course_id, courses(name)")
+          .eq("year", year)
+          .order("month"),
+        deptId
+      ),
       supabaseClient.from("course_materials").select("course_id"),
-      supabaseClient.from("exams").select("id, course_id"),
+      deptOrCentral(supabaseClient.from("exams").select("id, course_id"), deptId),
     ]);
 
     setCourses(courseRes.data || []);
     setCalendarRows(calRes.data || []);
+
+    const calIds = (calRes.data || []).map((r) => r.id);
+    if (calIds.length > 0) {
+      const { data: sessData } = await supabaseClient
+        .from("training_sessions")
+        .select("id, session_date, shift, calendar_id")
+        .in("calendar_id", calIds);
+      setYearSessions(sessData || []);
+    } else {
+      setYearSessions([]);
+    }
 
     const matCount = {};
     (matRes.data || []).forEach((r) => {
@@ -1268,7 +1666,7 @@ function AnnualPlannerPage() {
       }
       const { data: newCourse, error: courseError } = await supabaseClient
         .from("courses")
-        .insert({ name: newCourseName.trim() })
+        .insert({ name: newCourseName.trim(), department_id: deptId || null })
         .select()
         .single();
       if (courseError) {
@@ -1283,7 +1681,7 @@ function AnnualPlannerPage() {
 
     const { data: newEntry, error } = await supabaseClient
       .from("training_calendar")
-      .insert({ course_id: courseIdToUse, year, month: newMonth })
+      .insert({ course_id: courseIdToUse, year, month: newMonth, department_id: deptId || null })
       .select("id, year, month, course_id")
       .single();
     if (error) {
@@ -1357,11 +1755,14 @@ function AnnualPlannerPage() {
         .from("course_materials")
         .select("id, title, drive_url")
         .eq("course_id", entry.course_id),
-      supabaseClient
-        .from("exams")
-        .select("id, exam_name, exam_form_url")
-        .eq("course_id", entry.course_id)
-        .order("exam_name"),
+      deptOrCentral(
+        supabaseClient
+          .from("exams")
+          .select("id, exam_name, exam_form_url")
+          .eq("course_id", entry.course_id)
+          .order("exam_name"),
+        deptId
+      ),
     ]);
     setPlanMaterials(matRes.data || []);
     setPlanExams(examRes.data || []);
@@ -1526,6 +1927,8 @@ function AnnualPlannerPage() {
       course_id: selectedPlanEntry.course_id,
       exam_name: newExamName.trim(),
       exam_form_url: newExamUrl.trim(),
+      department_id: deptId || null,
+      response_sheet_id: myDeptInfo ? myDeptInfo.response_sheet_id : null,
     });
     if (error) {
       setDetailError("เพิ่มข้อสอบไม่สำเร็จ: " + error.message);
@@ -1881,14 +2284,113 @@ function AnnualPlannerPage() {
             ))
           )}
         </>
+      ) : viewMonth === null ? (
+        // ---- ภาพรวมทั้งปี: ปฏิทิน 12 เดือน กดเข้าไปดูรายละเอียดแต่ละเดือน ----
+        <div className="year-grid">
+          {MONTH_NAMES.slice(1).map((monthName, idx) => {
+            const m = idx + 1;
+            const entries = visibleEntriesByMonth[m];
+            const missingExam = entries.filter((e) => (examsByCourse[e.course_id] || 0) === 0).length;
+            const trainedIds = new Set(yearSessions.map((x) => x.calendar_id));
+            const trainedCount = entries.filter((e) => trainedIds.has(e.id)).length;
+            const nowD = new Date();
+            const isCurrent = year === nowD.getFullYear() && m === nowD.getMonth() + 1;
+            return (
+              <div
+                key={m}
+                className={"month-cell" + (isCurrent ? " current" : "") + (entries.length === 0 ? " empty" : "")}
+                onClick={() => setViewMonth(m)}
+              >
+                <div className="month-cell-head">
+                  <span>{MONTH_FULL_NAMES[m]}</span>
+                  <span className="month-cell-count">{entries.length} แผน</span>
+                </div>
+                {entries.slice(0, 3).map((e) => (
+                  <div key={e.id} className="month-cell-item">
+                    {e.courses ? e.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+                  </div>
+                ))}
+                {entries.length > 3 && (
+                  <div className="month-cell-more">+ อีก {entries.length - 3} หลักสูตร</div>
+                )}
+                {entries.length > 0 && (
+                  <div style={{ marginTop: 6 }}>
+                    <span className={"badge " + (trainedCount === entries.length ? "ok" : "warn")}>
+                      อบรมแล้ว {trainedCount}/{entries.length}
+                    </span>
+                    {missingExam > 0 && <span className="badge warn">ขาดข้อสอบ {missingExam}</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       ) : (
-        MONTH_NAMES.slice(1).map((monthName, idx) => {
-          const m = idx + 1;
+        // ---- ปฏิทินรายเดือน: วันที่มี session อบรม + รายการแผนของเดือนนั้น ----
+        (() => {
+          const m = viewMonth;
           const entries = visibleEntriesByMonth[m];
-          if (filterMode !== "all" && entries.length === 0) return null;
+          const entryById = {};
+          calendarRows.forEach((e) => { entryById[e.id] = e; });
+          const daysInMonth = new Date(year, m, 0).getDate();
+          const firstWeekday = new Date(year, m - 1, 1).getDay(); // 0 = อาทิตย์
+          const sessionsByDay = {};
+          yearSessions.forEach((x) => {
+            const [sy, sm, sd] = String(x.session_date).slice(0, 10).split("-").map((v) => parseInt(v, 10));
+            if (sy === year && sm === m) {
+              if (!sessionsByDay[sd]) sessionsByDay[sd] = [];
+              sessionsByDay[sd].push(x);
+            }
+          });
+          const cells = [];
+          for (let i = 0; i < firstWeekday; i++) cells.push(null);
+          for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+          const nowD = new Date();
           return (
-            <div key={m} style={{ marginTop: 20 }}>
-              <h3 style={{ borderBottom: "1px solid #eaecf0", paddingBottom: 6 }}>{monthName}</h3>
+            <div style={{ marginTop: 16 }}>
+              <div className="header-row">
+                <button className="secondary" onClick={() => setViewMonth(null)}>← ภาพรวมทั้งปี</button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="secondary" disabled={m === 1} onClick={() => setViewMonth(m - 1)}>◀</button>
+                  <button className="secondary" disabled={m === 12} onClick={() => setViewMonth(m + 1)}>▶</button>
+                </div>
+              </div>
+              <h3 style={{ marginTop: 14 }}>{MONTH_FULL_NAMES[m]} {year + 543}</h3>
+
+              <div className="day-grid">
+                {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((w) => (
+                  <div key={w} className="day-head">{w}</div>
+                ))}
+                {cells.map((d, i) => {
+                  if (d === null) return <div key={"b" + i} className="day-cell blank"></div>;
+                  const isToday = year === nowD.getFullYear() && m === nowD.getMonth() + 1 && d === nowD.getDate();
+                  return (
+                    <div key={d} className={"day-cell" + (isToday ? " today" : "")}>
+                      <div className="day-num">{d}</div>
+                      {(sessionsByDay[d] || []).map((x) => {
+                        const e = entryById[x.calendar_id];
+                        return (
+                          <div
+                            key={x.id}
+                            className="day-chip"
+                            title={(e && e.courses ? e.courses.name : "") + " · กะ " + (x.shift || "-")}
+                            onClick={() => e && openPlanDetail(e)}
+                          >
+                            {(e && e.courses ? e.courses.name : "อบรม")} · {x.shift || "-"}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 6 }}>
+                ในปฏิทินคือวันที่มีการสร้าง session อบรมจริง · กดที่รายการเพื่อจัดการเอกสาร/ข้อสอบ
+              </p>
+
+              <h3 style={{ marginTop: 20, borderBottom: "1px solid var(--line)", paddingBottom: 6 }}>
+                แผนอบรมเดือนนี้ ({entries.length})
+              </h3>
               {entries.length === 0 ? (
                 <p style={{ color: "#667085" }}>ยังไม่มีแผนอบรม</p>
               ) : (
@@ -1896,6 +2398,7 @@ function AnnualPlannerPage() {
                   const matCount = materialsByCourse[entry.course_id] || 0;
                   const examCount = examsByCourse[entry.course_id] || 0;
                   const isEditing = editingId === entry.id;
+                  const sessCount = yearSessions.filter((x) => x.calendar_id === entry.id).length;
                   return (
                     <div className="course-card" key={entry.id}>
                       <div className="icon-circle ok">
@@ -1907,6 +2410,9 @@ function AnnualPlannerPage() {
                         </div>
                         <span className={"badge " + (matCount > 0 ? "ok" : "warn")}>เอกสาร {matCount}</span>
                         <span className={"badge " + (examCount > 0 ? "ok" : "warn")}>ข้อสอบ {examCount}</span>
+                        <span className={"badge " + (sessCount > 0 ? "ok" : "warn")}>
+                          {sessCount > 0 ? "อบรมแล้ว " + sessCount + " รอบ" : "ยังไม่อบรม"}
+                        </span>
                       </div>
                       {isEditing ? (
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1933,7 +2439,7 @@ function AnnualPlannerPage() {
               )}
             </div>
           );
-        })
+        })()
       )}
     </div>
   );
@@ -1982,10 +2488,12 @@ function MonthlyBarChart({ data, color }) {
 }
 
 // ---- หน้า Dashboard ภาพรวม (แอดมิน) ----
-function DashboardPage() {
-  const [year, setYear] = useState(2026);
+function DashboardPage({ deptId }) {
+  const [year, setYear] = useState(new Date().getFullYear());
   const [completionRows, setCompletionRows] = useState([]);
   const [attendanceRows, setAttendanceRows] = useState([]);
+  const [planRows, setPlanRows] = useState([]); // แผนอบรมของปีนี้ [{id, month, courses}]
+  const [trainedCalIds, setTrainedCalIds] = useState(new Set()); // แผนที่มี session อบรมจริงแล้ว
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -1994,21 +2502,50 @@ function DashboardPage() {
 
   const loadAll = async () => {
     setLoading(true);
-    const [compRes, attRes] = await Promise.all([
+    const { data: cal } = await deptEq(
       supabaseClient
-        .from("v_course_completion")
-        .select("course_id, course_name, month, employee_id, total_exams, passed_exams, completed")
-        .eq("year", year),
+        .from("training_calendar")
+        .select("id, year, month, course_id, courses(name)")
+        .eq("year", year)
+        .order("month"),
+      deptId
+    );
+    const calRows = cal || [];
+    const calIds = calRows.map((r) => r.id);
+    setPlanRows(calRows);
+
+    let compQuery = supabaseClient
+      .from("v_course_completion")
+      .select("calendar_id, course_id, course_name, month, employee_id, total_exams, passed_exams, completed")
+      .eq("year", year);
+    if (deptId) compQuery = compQuery.in("calendar_id", calIds.length > 0 ? calIds : ["00000000-0000-0000-0000-000000000000"]);
+
+    const [compRes, attRes, sessRes, deptEmpRes] = await Promise.all([
+      compQuery,
       supabaseClient
         .from("session_attendance")
-        .select("status, training_sessions(training_calendar(year, month))"),
+        .select("status, training_sessions(calendar_id, training_calendar(year, month))"),
+      calIds.length > 0
+        ? supabaseClient.from("training_sessions").select("calendar_id").in("calendar_id", calIds)
+        : Promise.resolve({ data: [] }),
+      deptId
+        ? supabaseClient.from("employees").select("id").eq("department_id", deptId)
+        : Promise.resolve({ data: null }),
     ]);
-    setCompletionRows(compRes.data || []);
+    // กันไว้: ถ้า view ยังจับคู่ข้ามแผนก ให้เหลือเฉพาะพนักงานของแผนกที่ดูอยู่
+    const deptEmpIds = deptEmpRes.data ? new Set(deptEmpRes.data.map((e) => e.id)) : null;
+    setCompletionRows((compRes.data || []).filter((r) => !deptEmpIds || deptEmpIds.has(r.employee_id)));
 
+    const calIdSet = new Set(calIds);
     const attThisYear = (attRes.data || []).filter(
-      (r) => r.training_sessions && r.training_sessions.training_calendar && r.training_sessions.training_calendar.year === year
+      (r) =>
+        r.training_sessions &&
+        r.training_sessions.training_calendar &&
+        r.training_sessions.training_calendar.year === year &&
+        (!deptId || calIdSet.has(r.training_sessions.calendar_id))
     );
     setAttendanceRows(attThisYear);
+    setTrainedCalIds(new Set((sessRes.data || []).map((r) => r.calendar_id)));
     setLoading(false);
   };
 
@@ -2045,6 +2582,22 @@ function DashboardPage() {
   const totalPresent = attendanceRows.filter((r) => r.status === "present").length;
   const overallAttendanceRate = totalAttendanceRecords > 0 ? (totalPresent / totalAttendanceRecords) * 100 : 0;
 
+  // ---- % อบรมตามแผน = แผนที่มี session อบรมจริงแล้ว ÷ แผนที่ถึงกำหนดแล้ว (ถึงเดือนปัจจุบัน) ----
+  const today = new Date();
+  const curY = today.getFullYear();
+  const curM = today.getMonth() + 1;
+  const isDue = (m) => year < curY || (year === curY && m <= curM);
+  const duePlans = planRows.filter((r) => isDue(r.month));
+  const trainedDue = duePlans.filter((r) => trainedCalIds.has(r.id));
+  const planRate = duePlans.length > 0 ? (trainedDue.length / duePlans.length) * 100 : 0;
+  const overduePlans = duePlans.filter((r) => !trainedCalIds.has(r.id));
+  const planMonthly = {};
+  for (let m = 1; m <= 12; m++) planMonthly[m] = { total: 0, trained: 0 };
+  planRows.forEach((r) => {
+    planMonthly[r.month].total += 1;
+    if (trainedCalIds.has(r.id)) planMonthly[r.month].trained += 1;
+  });
+
   return (
     <div className="page">
       <div className="header-row">
@@ -2063,13 +2616,49 @@ function DashboardPage() {
           { label: "พนักงานที่ถูกติดตาม", value: uniqueEmployees, suffix: " คน" },
           { label: "อัตราผ่านรวมทั้งปี", value: overallRate.toFixed(1), suffix: "%" },
           { label: "อัตราเข้าอบรมรวม", value: overallAttendanceRate.toFixed(1), suffix: "%" },
+          {
+            label: "% อบรมตามแผน (" + trainedDue.length + "/" + duePlans.length + " แผน)",
+            value: planRate.toFixed(1),
+            suffix: "%",
+          },
         ].map((s, i) => (
-          <div key={i} className="course-card" style={{ cursor: "default", flex: "1 1 160px", textAlign: "center" }}>
+          <div key={i} className="course-card" style={{ cursor: "default", flex: "1 1 160px", textAlign: "center", flexDirection: "column", gap: 4 }}>
             <div style={{ fontSize: 24, fontWeight: 700, color: "var(--accent)" }}>{s.value}{s.suffix}</div>
             <div style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 4 }}>{s.label}</div>
           </div>
         ))}
       </div>
+
+      {/* % อบรมตามแผน รายเดือน */}
+      <h3 style={{ marginTop: 24 }}>% อบรมตามแผน รายเดือน</h3>
+      <p style={{ color: "var(--ink-soft)", fontSize: 13, marginTop: -6 }}>
+        นับแผนที่มีการสร้าง session อบรมจริงแล้ว เทียบกับแผนที่ถึงกำหนด (ถึงเดือนปัจจุบัน)
+      </p>
+      {planRows.length === 0 ? (
+        <p style={{ color: "var(--ink-soft)" }}>ยังไม่มีแผนอบรมในปีนี้</p>
+      ) : (
+        <MonthlyBarChart
+          color="var(--accent)"
+          data={MONTH_NAMES.slice(1).map((name, i) => {
+            const m = i + 1;
+            const st = planMonthly[m];
+            const rate = st.total > 0 ? (st.trained / st.total) * 100 : 0;
+            return { label: name, value: rate, hasData: st.total > 0 && isDue(m) };
+          })}
+        />
+      )}
+      {overduePlans.length > 0 && (
+        <div style={{ background: "var(--warn-bg)", borderRadius: 10, padding: "10px 14px", marginTop: 10, fontSize: 14 }}>
+          <div style={{ color: "var(--warn)", fontWeight: 600, marginBottom: 6 }}>
+            ⚠️ แผนที่ถึงกำหนดแล้วแต่ยังไม่มี session อบรม ({overduePlans.length})
+          </div>
+          {overduePlans.map((r) => (
+            <div key={r.id} style={{ color: "var(--ink)" }}>
+              • {MONTH_NAMES[r.month]} — {r.courses ? r.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* อัตราผ่านรายเดือน */}
       <h3 style={{ marginTop: 24 }}>อัตราสอบผ่านรายเดือน (ทั้งแผนก)</h3>
@@ -2107,7 +2696,10 @@ function DashboardPage() {
 }
 
 // ---- หน้าจัดการพนักงาน (แอดมิน) ----
-function EmployeeManagementPage() {
+function EmployeeManagementPage({ deptId, departments }) {
+  const deptList = departments || [];
+  const deptCodeById = {};
+  deptList.forEach((d) => { deptCodeById[d.id] = d.code; });
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -2122,12 +2714,14 @@ function EmployeeManagementPage() {
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState("employee");
   const [newShift, setNewShift] = useState("");
+  const [newDept, setNewDept] = useState(deptId || "");
 
   // แก้ไขรายคน
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState("");
   const [editShift, setEditShift] = useState("");
+  const [editDept, setEditDept] = useState("");
 
   useEffect(() => {
     loadEmployees();
@@ -2137,7 +2731,7 @@ function EmployeeManagementPage() {
     setLoading(true);
     const { data } = await supabaseClient
       .from("employees")
-      .select("id, employee_code, name, role, shift, active")
+      .select("id, employee_code, name, role, shift, active, department_id")
       .order("name");
     setEmployees(data || []);
     setLoading(false);
@@ -2199,6 +2793,11 @@ function EmployeeManagementPage() {
         return;
       }
 
+      // ผูกแผนกให้พนักงานใหม่ (Apps Script สร้างแถวให้แล้ว แต่ยังไม่ได้ใส่แผนก)
+      if (newDept) {
+        await supabaseClient.from("employees").update({ department_id: newDept }).eq("id", created.id);
+      }
+
       setNewCode("");
       setNewName("");
       setNewRole("employee");
@@ -2216,12 +2815,13 @@ function EmployeeManagementPage() {
     setEditName(emp.name || "");
     setEditRole(emp.role || "employee");
     setEditShift(emp.shift || "");
+    setEditDept(emp.department_id || "");
   };
 
   const saveEdit = async (emp) => {
     const { error } = await supabaseClient
       .from("employees")
-      .update({ name: editName.trim(), role: editRole, shift: editShift.trim() || null })
+      .update({ name: editName.trim(), role: editRole, shift: editShift.trim() || null, department_id: editDept || null })
       .eq("id", emp.id);
     if (error) {
       alert("แก้ไขไม่สำเร็จ: " + error.message);
@@ -2253,6 +2853,7 @@ function EmployeeManagementPage() {
 
   const roleLabel = { admin: "Admin", foreman: "Foreman", employee: "Employee" };
   const filtered = employees.filter((e) => {
+    if (deptId && e.department_id !== deptId) return false;
     if (filterRole !== "all" && e.role !== filterRole) return false;
     if (filterStatus === "active" && !e.active) return false;
     if (filterStatus === "inactive" && e.active) return false;
@@ -2302,6 +2903,14 @@ function EmployeeManagementPage() {
               onChange={(e) => setNewShift(e.target.value)}
               style={{ width: 120 }}
             />
+            {deptList.length > 0 && (
+              <select value={newDept} onChange={(e) => setNewDept(e.target.value)}>
+                <option value="">ไม่ระบุแผนก</option>
+                {deptList.map((d) => (
+                  <option key={d.id} value={d.id}>แผนก {d.code}</option>
+                ))}
+              </select>
+            )}
           </div>
           {formError && <p className="error">{formError}</p>}
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -2382,6 +2991,14 @@ function EmployeeManagementPage() {
                   onChange={(e) => setEditShift(e.target.value)}
                   style={{ width: 100, margin: 0 }}
                 />
+                {deptList.length > 0 && (
+                  <select value={editDept} onChange={(e) => setEditDept(e.target.value)}>
+                    <option value="">ไม่ระบุแผนก</option>
+                    {deptList.map((d) => (
+                      <option key={d.id} value={d.id}>แผนก {d.code}</option>
+                    ))}
+                  </select>
+                )}
                 <button onClick={() => saveEdit(emp)}>บันทึก</button>
                 <button className="secondary" onClick={() => setEditingId(null)}>ยกเลิก</button>
               </div>
@@ -2393,6 +3010,9 @@ function EmployeeManagementPage() {
                   </div>
                   <span className="badge ok">{roleLabel[emp.role] || emp.role}</span>
                   {emp.shift && <span className="badge ok">กะ {emp.shift}</span>}
+                  {emp.department_id && deptCodeById[emp.department_id] && (
+                    <span className="badge ok">แผนก {deptCodeById[emp.department_id]}</span>
+                  )}
                   {!emp.active && <span className="badge fail">ปิดใช้งานแล้ว</span>}
                 </div>
                 <ActionMenu
@@ -2447,7 +3067,7 @@ function AttendanceRow({ emp, data, onToggle, onNote, onRemove }) {
 }
 
 // ---- หน้า Foreman: มาร์คการเข้าอบรม ----
-function ForemanPage({ session }) {
+function ForemanPage({ session, deptId }) {
   const [me, setMe] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [calendarRows, setCalendarRows] = useState([]);
@@ -2475,16 +3095,22 @@ function ForemanPage({ session }) {
         .select("id, employee_code, name, shift")
         .eq("employee_code", code)
         .single(),
-      supabaseClient
-        .from("employees")
-        .select("id, employee_code, name, shift")
-        .eq("active", true)
-        .order("name"),
-      supabaseClient
-        .from("training_calendar")
-        .select("id, year, month, course_id, courses(name)")
-        .order("year")
-        .order("month"),
+      deptEq(
+        supabaseClient
+          .from("employees")
+          .select("id, employee_code, name, shift")
+          .eq("active", true)
+          .order("name"),
+        deptId
+      ),
+      deptEq(
+        supabaseClient
+          .from("training_calendar")
+          .select("id, year, month, course_id, courses(name)")
+          .order("year")
+          .order("month"),
+        deptId
+      ),
     ]);
     setMe(meRes.data || null);
     setEmployees(empRes.data || []);
@@ -2881,7 +3507,7 @@ function ExamStatusRow({ exam, attempt, onTakeExam }) {
 }
 
 // ---- หน้าพนักงาน: ดูหลักสูตร + เข้าสอบ ----
-function EmployeePage({ session }) {
+function EmployeePage({ session, deptId }) {
   const [me, setMe] = useState(null);
   const [calendarRows, setCalendarRows] = useState([]);
   const [examsByCourse, setExamsByCourse] = useState({});
@@ -2907,12 +3533,15 @@ function EmployeePage({ session }) {
         .select("id, employee_code, name, shift")
         .eq("employee_code", code)
         .single(),
-      supabaseClient
-        .from("training_calendar")
-        .select("id, year, month, course_id, courses(name)")
-        .order("year")
-        .order("month"),
-      supabaseClient.from("exams").select("id, course_id"),
+      deptEq(
+        supabaseClient
+          .from("training_calendar")
+          .select("id, year, month, course_id, courses(name)")
+          .order("year")
+          .order("month"),
+        deptId
+      ),
+      deptOrCentral(supabaseClient.from("exams").select("id, course_id"), deptId),
     ]);
 
     setMe(meRes.data || null);
@@ -2953,11 +3582,14 @@ function EmployeePage({ session }) {
     setSelectedEntry(entry);
     setLoadingDetail(true);
     const [{ data: exams }, { data: materials }] = await Promise.all([
-      supabaseClient
-        .from("exams")
-        .select("id, exam_name, exam_form_url, plan_id_entry")
-        .eq("course_id", entry.course_id)
-        .order("exam_name"),
+      deptOrCentral(
+        supabaseClient
+          .from("exams")
+          .select("id, exam_name, exam_form_url, plan_id_entry")
+          .eq("course_id", entry.course_id)
+          .order("exam_name"),
+        deptId
+      ),
       supabaseClient
         .from("course_materials")
         .select("id, title, drive_url")
@@ -3124,7 +3756,7 @@ function EmployeePage({ session }) {
 
 // ---- หน้ารวม แยกตาม role ----
 // ---- หน้าหลัก: ต้อนรับ + ทางลัดไปหน้าอื่น ----
-function HomePage({ role, navItems, onNavigate, myName }) {
+function HomePage({ role, navItems, onNavigate, myName, me, deptId }) {
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? "สวัสดีตอนเช้า" : hour < 18 ? "สวัสดีตอนบ่าย" : "สวัสดีตอนเย็น";
@@ -3135,6 +3767,76 @@ function HomePage({ role, navItems, onNavigate, myName }) {
     "ความใส่ใจเล็กๆ วันนี้ ป้องกันปัญหาใหญ่ในวันหน้า",
   ];
   const quote = quotes[now.getDate() % quotes.length];
+  const isManager = role === "admin" || role === "foreman";
+
+  // ---- การอบรม/สอบที่กำลังจะมาถึง (เดือนนี้ + เดือนหน้า) และที่ค้างสอบของตัวเอง ----
+  const [upcoming, setUpcoming] = useState(null); // null = กำลังโหลด
+
+  useEffect(() => {
+    loadUpcoming();
+  }, []);
+
+  const loadUpcoming = async () => {
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    const nextY = m === 12 ? y + 1 : y;
+    const nextM = m === 12 ? 1 : m + 1;
+    const curKey = y * 100 + m;
+    const nextKey = nextY * 100 + nextM;
+
+    let calQuery = supabaseClient
+      .from("training_calendar")
+      .select("id, year, month, course_id, courses(name)")
+      .in("year", [y, nextY])
+      .order("year")
+      .order("month");
+    calQuery = deptEq(calQuery, deptId);
+    const { data: cal } = await calQuery;
+    const rows = cal || [];
+    const keyOf = (r) => r.year * 100 + r.month;
+    const upcomingRows = rows.filter((r) => keyOf(r) === curKey || keyOf(r) === nextKey);
+    const pastRows = rows.filter((r) => keyOf(r) < curKey && r.year === y);
+
+    const myComp = {};
+    const myIds = [...upcomingRows, ...pastRows].map((r) => r.id);
+    if (me && myIds.length > 0) {
+      const { data } = await supabaseClient
+        .from("v_course_completion")
+        .select("calendar_id, total_exams, passed_exams, completed")
+        .eq("employee_id", me.id)
+        .in("calendar_id", myIds);
+      (data || []).forEach((r) => { myComp[r.calendar_id] = r; });
+    }
+
+    const team = {};
+    if (isManager && upcomingRows.length > 0) {
+      const { data } = await supabaseClient
+        .from("v_course_completion")
+        .select("calendar_id, completed, total_exams")
+        .in("calendar_id", upcomingRows.map((r) => r.id));
+      (data || []).forEach((r) => {
+        if (!team[r.calendar_id]) team[r.calendar_id] = { done: 0, total: 0 };
+        if (r.total_exams > 0) {
+          team[r.calendar_id].total += 1;
+          if (r.completed) team[r.calendar_id].done += 1;
+        }
+      });
+    }
+
+    const overdue = pastRows.filter((r) => {
+      const c = myComp[r.id];
+      return c && c.total_exams > 0 && !c.completed;
+    });
+    setUpcoming({ rows: upcomingRows, overdue, myComp, team, curKey });
+  };
+
+  const myStatusBadge = (calId) => {
+    const c = upcoming.myComp[calId];
+    if (!c || c.total_exams === 0) return <span className="badge warn">ยังไม่มีข้อสอบ</span>;
+    if (c.completed) return <span className="badge ok">ผ่านแล้ว</span>;
+    if (c.passed_exams > 0) return <span className="badge warn">ผ่าน {c.passed_exams}/{c.total_exams}</span>;
+    return <span className="badge warn">ยังไม่สอบ/ยังไม่ผ่าน</span>;
+  };
 
   return (
     <div className="page">
@@ -3148,6 +3850,58 @@ function HomePage({ role, navItems, onNavigate, myName }) {
           </p>
         </div>
       </div>
+
+      <div className="nav-section" style={{ margin: "0 0 18px", maxWidth: "none" }}>
+        <div className="section-title">
+          <i className="ti ti-bell" aria-hidden="true"></i>
+          การอบรม/สอบที่กำลังจะมาถึง
+        </div>
+        {upcoming === null ? (
+          <p style={{ color: "var(--ink-soft)", fontSize: 14 }}>กำลังโหลด...</p>
+        ) : (
+          <>
+            {upcoming.overdue.length > 0 && (
+              <div
+                style={{ background: "var(--warn-bg)", color: "var(--warn)", borderRadius: 10, padding: "10px 14px", marginTop: 10, fontSize: 14, cursor: "pointer" }}
+                onClick={() => onNavigate("exam")}
+              >
+                <i className="ti ti-alert-triangle" aria-hidden="true" style={{ marginRight: 6 }}></i>
+                คุณยังค้างสอบ {upcoming.overdue.length} หลักสูตร:{" "}
+                {upcoming.overdue.map((r) => (r.courses ? r.courses.name : "") + " (" + MONTH_NAMES[r.month] + ")").join(", ")}
+              </div>
+            )}
+            {upcoming.rows.length === 0 ? (
+              <p style={{ color: "var(--ink-soft)", fontSize: 14 }}>ไม่มีการอบรมในเดือนนี้และเดือนหน้า</p>
+            ) : (
+              upcoming.rows.map((r) => {
+                const isThisMonth = r.year * 100 + r.month === upcoming.curKey;
+                const t = upcoming.team[r.id];
+                return (
+                  <div className="course-card" key={r.id} onClick={() => onNavigate("exam")}>
+                    <div className={"icon-circle " + (isThisMonth ? "warn" : "ok")}>
+                      <i className={"ti " + (isThisMonth ? "ti-calendar-due" : "ti-calendar-event")} aria-hidden="true"></i>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                        {r.courses ? r.courses.name : "(ไม่พบชื่อหลักสูตร)"}
+                      </div>
+                      <span className={"badge " + (isThisMonth ? "warn" : "ok")}>
+                        {isThisMonth ? "เดือนนี้" : "เดือนหน้า"} · {MONTH_NAMES[r.month]} {r.year + 543}
+                      </span>
+                      {myStatusBadge(r.id)}
+                      {isManager && t && t.total > 0 && (
+                        <span className="badge ok">ทีมผ่าน {t.done}/{t.total} คน</span>
+                      )}
+                    </div>
+                    <i className="ti ti-chevron-right" style={{ color: "var(--ink-soft)", fontSize: 18, flexShrink: 0 }} aria-hidden="true"></i>
+                  </div>
+                );
+              })
+            )}
+          </>
+        )}
+      </div>
+
       <p style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-soft)", letterSpacing: 1, margin: "0 0 10px 4px" }}>
         เมนูลัด
       </p>
@@ -3181,18 +3935,33 @@ function Dashboard({ session, role, onLogout }) {
   const [view, setView] = useState("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [myName, setMyName] = useState("");
+  const [me, setMe] = useState(null); // {id, name, employee_code, shift, department_id}
+  const [departments, setDepartments] = useState([]); // [{id, code, name, response_sheet_id}]
+  const [deptId, setDeptId] = useState(null); // แผนกที่กำลังดูอยู่ (null = ทุกแผนก)
+  const [meLoaded, setMeLoaded] = useState(false);
 
   useEffect(() => {
     const code = session.user.email.split("@")[0];
-    supabaseClient
-      .from("employees")
-      .select("name")
-      .eq("employee_code", code)
-      .single()
-      .then(({ data }) => {
-        if (data) setMyName(data.name);
-      });
+    Promise.all([
+      supabaseClient
+        .from("employees")
+        .select("id, name, employee_code, shift, department_id")
+        .eq("employee_code", code)
+        .maybeSingle(),
+      supabaseClient.from("departments").select("id, code, name, response_sheet_id").order("code"),
+    ]).then(([meRes, deptRes]) => {
+      const meData = meRes.data || null;
+      setMe(meData);
+      if (meData) {
+        setMyName(meData.name);
+        setDeptId(meData.department_id || null);
+      }
+      setDepartments(deptRes.data || []);
+      setMeLoaded(true);
+    });
   }, []);
+
+  const myDept = departments.find((d) => d.id === deptId) || null;
 
   const navItemsByRole = {
     admin: [
@@ -3222,20 +3991,23 @@ function Dashboard({ session, role, onLogout }) {
   };
 
   const renderContent = () => {
-    if (view === "home") return <HomePage role={role} navItems={navItems} onNavigate={goTo} myName={myName} />;
+    if (!meLoaded) return <div className="page">กำลังโหลด...</div>;
+    const k = view + "-" + (deptId || "all");
+    const common = { deptId, departments, me, role };
+    if (view === "home") return <HomePage key={k} {...common} navItems={navItems} onNavigate={goTo} myName={myName} />;
     if (role === "admin") {
-      if (view === "scores") return <AdminCalendarPage role={role} />;
-      if (view === "planner") return <AnnualPlannerPage />;
-      if (view === "dashboard") return <DashboardPage />;
-      if (view === "employees") return <EmployeeManagementPage />;
-      if (view === "exam") return <EmployeePage session={session} />;
+      if (view === "scores") return <AdminCalendarPage key={k} {...common} />;
+      if (view === "planner") return <AnnualPlannerPage key={k} {...common} />;
+      if (view === "dashboard") return <DashboardPage key={k} {...common} />;
+      if (view === "employees") return <EmployeeManagementPage key={k} {...common} />;
+      if (view === "exam") return <EmployeePage key={k} session={session} {...common} />;
     }
     if (role === "foreman") {
-      if (view === "main") return <ForemanPage session={session} />;
-      if (view === "scores") return <AdminCalendarPage role={role} />;
-      if (view === "exam") return <EmployeePage session={session} />;
+      if (view === "main") return <ForemanPage key={k} session={session} {...common} />;
+      if (view === "scores") return <AdminCalendarPage key={k} {...common} />;
+      if (view === "exam") return <EmployeePage key={k} session={session} {...common} />;
     }
-    return <EmployeePage session={session} />;
+    return <EmployeePage key={k} session={session} {...common} />;
   };
 
   const sidebarInner = (
@@ -3244,7 +4016,7 @@ function Dashboard({ session, role, onLogout }) {
         <div className="icon-circle ok" style={{ background: "var(--accent-bg)" }}>
           <i className="ti ti-clipboard-check" aria-hidden="true"></i>
         </div>
-        QPT
+        ระบบข้อสอบ QA
       </div>
       {navItems.map((item) => (
         <div
@@ -3270,6 +4042,21 @@ function Dashboard({ session, role, onLogout }) {
             <span className="role-badge" style={{ marginBottom: 0 }}>
               {myName ? myName + " (" + roleShortLabel + ")" : roleShortLabel}
             </span>
+            {role === "admin" && departments.length > 0 ? (
+              <select
+                value={deptId || ""}
+                onChange={(e) => setDeptId(e.target.value || null)}
+                style={{ width: "auto", margin: 0, padding: "6px 10px", fontSize: 14 }}
+                title="เลือกแผนกที่ต้องการดู"
+              >
+                <option value="">ทุกแผนก</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>แผนก {d.code}</option>
+                ))}
+              </select>
+            ) : (
+              myDept && <span className="badge ok" style={{ margin: 0 }}>แผนก {myDept.code}</span>
+            )}
           </div>
           <div className="content-topbar-right">
             <button className="logout-btn" onClick={onLogout}>
