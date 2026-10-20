@@ -531,9 +531,225 @@
     }
     .no-print { display: none !important; }
   }
+
+  /* ================================================================
+     ธีมกระจก (Liquid Glass) — ทับสไตล์เดิมด้านบน
+     ================================================================ */
+  :root {
+    --cream: rgba(255,255,255,0.38);
+    --surface: rgba(255,255,255,0.62);
+    --line: rgba(27,84,61,0.10);
+    --ink: #1F2D27;
+    --ink-soft: #5F7069;
+    --accent: #1F9A6A;
+    --accent-dark: #146B49;
+    --accent-bg: rgba(31,154,106,0.13);
+    --success-bg: rgba(31,154,106,0.13);
+    --warn-bg: rgba(242,178,52,0.18);
+    --danger-bg: rgba(214,86,62,0.13);
+    --glass-bg: rgba(255,255,255,0.55);
+    --glass-border: rgba(255,255,255,0.75);
+    --glass-blur: blur(22px) saturate(170%);
+    --glass-shadow: 0 10px 34px rgba(20,80,56,0.10), inset 0 1px 0 rgba(255,255,255,0.85);
+    --grad-accent: linear-gradient(135deg, #2CB884 0%, #1A8A5E 100%);
+  }
+  html { background: #E3F2EA; }
+  body {
+    background:
+      radial-gradient(1200px 700px at 8% 0%, #D5F1E3 0%, transparent 60%),
+      radial-gradient(900px 600px at 100% 20%, #DCEFF5 0%, transparent 60%),
+      radial-gradient(900px 700px at 50% 110%, #F3F0D9 0%, transparent 60%),
+      #E6F3EC;
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  #root { position: relative; z-index: 1; }
+
+  /* ---- ฉากหลัง: วัตถุ 3D นุ่มๆ (อยู่ด้านหลัง กดไม่ได้) ---- */
+  .bg-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .bg-scene > * { position: absolute; }
+  .bg-blob { border-radius: 50%; filter: blur(60px); opacity: .75; }
+  .bg-blob.b1 { width: 420px; height: 420px; left: -120px; top: 18%; background: #9EE3C2; }
+  .bg-blob.b2 { width: 380px; height: 380px; right: -100px; top: -80px; background: #A8DDEB; }
+  .bg-blob.b3 { width: 360px; height: 360px; right: 18%; bottom: -160px; background: #F6E3A1; }
+  .bg-sphere {
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #FFFFFF 0%, #A7EBCB 22%, #3DBB88 62%, #1E8A5F 100%);
+    box-shadow: 0 24px 50px rgba(20,90,60,0.25);
+  }
+  .bg-sphere.s1 { width: 120px; height: 120px; left: 6%; top: 9%; }
+  .bg-sphere.s2 { width: 64px; height: 64px; right: 9%; bottom: 14%;
+    background: radial-gradient(circle at 32% 28%, #FFFFFF 0%, #FFE7A3 25%, #F2B634 65%, #C98A12 100%);
+    box-shadow: 0 18px 36px rgba(170,120,20,0.25); }
+  .bg-ring {
+    width: 300px; height: 300px; border-radius: 50%;
+    border: 42px solid #F4CF63;
+    box-shadow: inset -14px -18px 28px rgba(150,100,0,0.22), inset 14px 16px 26px rgba(255,255,255,0.65), 0 30px 60px rgba(150,110,20,0.18);
+    left: -90px; bottom: -120px;
+  }
+  .bg-cube {
+    width: 96px; height: 96px; border-radius: 26px;
+    background: linear-gradient(145deg, #7FE0B5 0%, #2FAE7C 55%, #1C8059 100%);
+    box-shadow: inset 8px 8px 16px rgba(255,255,255,0.45), inset -10px -12px 18px rgba(0,60,35,0.25), 0 26px 46px rgba(20,90,60,0.25);
+    transform: rotate(18deg);
+    right: 7%; top: 40%;
+  }
+  .bg-cube.c2 { width: 58px; height: 58px; border-radius: 16px; right: auto; left: 44%; top: 6%;
+    background: linear-gradient(145deg, #B8ECF5 0%, #5CC4D9 55%, #2E97AD 100%); transform: rotate(-14deg); }
+  .bg-dot { width: 18px; height: 18px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.95); }
+  .bg-dot.d1 { left: 30%; top: 14%; width: 30px; height: 30px; }
+  .bg-dot.d2 { right: 30%; bottom: 10%; }
+  .bg-dot.d3 { left: 12%; bottom: 30%; width: 10px; height: 10px; background: #fff; border: none; }
+
+  /* ---- พื้นผิวกระจก ---- */
+  .glass, .sidebar, .content-topbar, .nav-section, .tile, .month-cell, .menu-dropdown,
+  .bottom-tab-bar, .container, .login-form {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* แถบเมนูข้าง: ลอยเป็นแผ่นกระจก */
+  .app-shell { gap: 0; }
+  .sidebar {
+    margin: 14px 0 14px 14px;
+    border-radius: 24px;
+    position: sticky; top: 14px;
+    height: calc(100vh - 28px);
+    padding: 20px 14px;
+  }
+  .sidebar-logo { color: var(--accent-dark); }
+  .sidebar-logo .icon-circle { background: var(--grad-accent) !important; color: #fff; border-radius: 12px; }
+  .sidebar-item { border-radius: 14px; transition: background .15s, color .15s; }
+  .sidebar-item:hover { background: rgba(255,255,255,0.55); color: var(--ink); }
+  .sidebar-item.active { background: var(--grad-accent); color: #fff; box-shadow: 0 8px 20px rgba(31,154,106,0.32); }
+
+  /* แถบบน: ลอยเป็นแผ่นกระจก */
+  .content-topbar { margin: 14px 14px 0; border-radius: 20px; top: 14px; }
+  .role-badge { background: rgba(255,255,255,0.7); border: 1px solid var(--glass-border); }
+
+  /* การ์ด / กล่อง */
+  .nav-section { border-radius: 24px; padding: 16px; }
+  .tile { border-radius: 20px; transition: transform .15s, box-shadow .15s; }
+  .tile:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(20,80,56,0.14), inset 0 1px 0 rgba(255,255,255,0.85); }
+  .tile.tile-primary { background: var(--grad-accent); border-color: rgba(255,255,255,0.35); box-shadow: 0 14px 32px rgba(31,154,106,0.35); }
+  .month-cell { border-radius: 18px; }
+  .month-cell.current { border: 2px solid var(--accent); }
+  .month-cell.empty { background: rgba(255,255,255,0.32); }
+  .section-title { border-radius: 14px; }
+  .menu-dropdown { border-radius: 16px; }
+  .session-history { background: rgba(255,255,255,0.45); border-radius: 12px; }
+
+  /* ปุ่ม / ช่องกรอก */
+  button { border-radius: 12px; background: var(--grad-accent); box-shadow: 0 6px 16px rgba(31,154,106,0.25); transition: transform .1s, box-shadow .15s, filter .15s; }
+  button:hover:not(:disabled) { filter: brightness(1.05); }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  button:disabled { background: #B9DCCB; box-shadow: none; }
+  button.secondary, .refresh-btn, .menu-btn, .logout-btn, .month-tab {
+    background: rgba(255,255,255,0.65); box-shadow: none;
+    border: 1px solid var(--glass-border);
+  }
+  .logout-btn { color: var(--danger); }
+  .month-tab.active { background: var(--grad-accent); color: #fff; border-color: transparent; box-shadow: 0 6px 16px rgba(31,154,106,0.28); }
+  .bottom-tab-item { background: none; box-shadow: none; border-radius: 16px; }
+  .status-btn.present { background: var(--grad-accent); }
+  .status-btn.absent { background: linear-gradient(135deg, #E06A4F, #BF4A33); box-shadow: 0 6px 16px rgba(200,82,58,0.25); }
+  input, select, textarea { background: rgba(255,255,255,0.72); border: 1px solid var(--glass-border); border-radius: 12px; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(31,154,106,0.14); }
+  th { color: var(--ink-soft); }
+  .badge { border-radius: 8px; }
+
+  /* ---- หน้า Login ---- */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 20px; }
+  .login-card {
+    width: 100%; max-width: 920px; display: grid; grid-template-columns: 1fr 1fr;
+    border-radius: 32px; overflow: hidden; padding: 0;
+    background: rgba(255,255,255,0.28);
+  }
+  .login-hero {
+    background: linear-gradient(160deg, rgba(178,234,206,0.92) 0%, rgba(122,211,170,0.92) 100%);
+    padding: 36px 36px 30px; display: flex; flex-direction: column; gap: 18px; color: #12452F;
+  }
+  .login-brand { display: flex; align-items: center; gap: 12px; }
+  .login-logo { width: 44px; height: 44px; border-radius: 14px; background: var(--grad-accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 8px 18px rgba(20,100,66,0.3); }
+  .login-brand-name { font-family: "Prompt", sans-serif; font-weight: 700; font-size: 19px; color: #0F3D29; }
+  .login-brand-sub { font-size: 11.5px; letter-spacing: .3px; color: #2D6A4F; }
+  .login-illus { width: 100%; max-width: 330px; align-self: center; height: auto; }
+  .login-hero h1 { font-family: "Prompt", sans-serif; font-size: 26px; margin: 0; color: #0F3D29; }
+  .login-hero p { margin: 6px 0 0; font-size: 14.5px; line-height: 1.55; color: #24573F; }
+  .login-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+  .login-chips span { font-size: 12px; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,0.55);
+    border: 1px solid rgba(255,255,255,0.8); color: #165A3C; display: inline-flex; align-items: center; gap: 5px; }
+  .login-form { padding: 48px 44px; display: flex; flex-direction: column; justify-content: center;
+    border: none; border-radius: 0; box-shadow: none; background: rgba(255,255,255,0.45); }
+  .login-form h2 { font-size: 26px; margin: 0; letter-spacing: .2px; }
+  .login-form .login-sub { color: var(--ink-soft); font-size: 14px; margin: 6px 0 26px; }
+  .login-label { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .pill-input { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.78);
+    border: 1px solid var(--glass-border); border-radius: 999px; padding: 0 18px; box-shadow: inset 0 1px 2px rgba(20,60,40,0.06); }
+  .pill-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(31,154,106,0.14); }
+  .pill-input i { font-size: 20px; color: var(--ink-soft); }
+  .pill-input input { border: none; background: transparent; margin: 0; padding: 15px 0; font-size: 17px; letter-spacing: 1px; box-shadow: none !important; }
+  .login-btn { width: 100%; margin-top: 18px; padding: 15px; font-size: 16px; border-radius: 999px; box-shadow: 0 10px 24px rgba(31,154,106,0.35); }
+  .login-help { font-size: 12.5px; color: var(--ink-soft); margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; gap: 6px; align-items: center; }
+
+  /* ---- มือถือ / แท็บเล็ต ---- */
+  @media (max-width: 899px) {
+    .sidebar.drawer-open { margin: 0; border-radius: 0 24px 24px 0; height: 100vh; top: 0; }
+    .content-topbar { margin: 10px 10px 0; top: 10px; border-radius: 18px; padding: 10px 12px; }
+    .bottom-tab-bar {
+      left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      border-radius: 26px; padding: 6px;
+    }
+    .bottom-tab-item.active { background: var(--accent-bg); }
+    .main-content { padding-bottom: 96px; }
+    .bg-ring { width: 200px; height: 200px; border-width: 30px; }
+    .bg-cube { width: 64px; height: 64px; border-radius: 18px; }
+    .bg-sphere.s1 { width: 80px; height: 80px; }
+  }
+  @media (max-width: 760px) {
+    .login-card { grid-template-columns: 1fr; max-width: 440px; border-radius: 28px; }
+    .login-hero { padding: 24px 24px 20px; gap: 12px; }
+    .login-illus { max-width: 210px; }
+    .login-hero h1 { font-size: 21px; }
+    .login-chips { display: none; }
+    .login-form { padding: 28px 24px 30px; }
+  }
+  /* เครื่องที่ไม่รองรับกระจกเบลอ หรือผู้ใช้ตั้งค่าลดความโปร่งใส → ใช้พื้นทึบ อ่านง่าย */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root { --glass-bg: rgba(255,255,255,0.93); --surface: #FFFFFF; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root { --glass-bg: rgba(255,255,255,0.95); --surface: #FFFFFF; }
+    .bg-blob { display: none; }
+  }
+  @media print { .bg-scene { display: none; } body { background: #fff; } }
+
+  /* ในระบบ (หลังล็อกอิน): เก็บวัตถุ 3D ไว้แค่ขอบจอ ไม่ให้บังเนื้อหา */
+  body:has(.app-shell) .bg-dot,
+  body:has(.app-shell) .bg-cube,
+  body:has(.app-shell) .bg-sphere.s2 { display: none; }
+  body:has(.app-shell) .bg-sphere.s1 { left: auto; right: -30px; top: auto; bottom: 8%; opacity: .55; }
+  body:has(.app-shell) .bg-ring { opacity: .7; }
+  @media (max-width: 899px) {
+    body:has(.app-shell) .bg-sphere.s1, body:has(.app-shell) .bg-ring { display: none; }
+    .role-badge { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
+    .content-topbar .badge { white-space: nowrap; }
+    .logout-btn { font-size: 0; padding: 9px 11px; gap: 0; }
+    .logout-btn i { font-size: 18px; }
+  }
 </style>
 </head>
 <body>
+<div class="bg-scene" aria-hidden="true">
+  <div class="bg-blob b1"></div><div class="bg-blob b2"></div><div class="bg-blob b3"></div>
+  <div class="bg-ring"></div><div class="bg-sphere s1"></div><div class="bg-sphere s2"></div>
+  <div class="bg-cube"></div><div class="bg-cube c2"></div>
+  <div class="bg-dot d1"></div><div class="bg-dot d2"></div><div class="bg-dot d3"></div>
+</div>
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect } = React;
@@ -651,39 +867,131 @@ function LoginPage({ onLogin }) {
   };
 
   return (
-    <div className="container">
-      <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div
-          className="icon-circle ok"
-          style={{ width: 56, height: 56, fontSize: 28, margin: "0 auto 14px", background: "var(--accent-bg)" }}
-        >
-          <i className="ti ti-clipboard-check" aria-hidden="true"></i>
+    <div className="login-wrap">
+      <div className="login-card glass">
+        <div className="login-hero">
+          <div className="login-brand">
+            <span className="login-logo"><i className="ti ti-clipboard-check" aria-hidden="true"></i></span>
+            <div>
+              <div className="login-brand-name">E-Examination</div>
+              <div className="login-brand-sub">SUNFOOD INTERNATIONAL · ฝ่ายประกันคุณภาพ</div>
+            </div>
+          </div>
+          <LoginIllustration />
+          <div>
+            <h1>ยินดีต้อนรับ</h1>
+            <p>อบรม ทำข้อสอบ และดูผลการสอบ<br />ได้ครบในที่เดียว</p>
+          </div>
+          <div className="login-chips">
+            <span><i className="ti ti-file-text" aria-hidden="true"></i>เอกสาร WI</span>
+            <span><i className="ti ti-pencil" aria-hidden="true"></i>ทำข้อสอบ</span>
+            <span><i className="ti ti-circle-check" aria-hidden="true"></i>รู้ผลทันที</span>
+            <span><i className="ti ti-bell" aria-hidden="true"></i>แจ้งเตือน LINE</span>
+          </div>
         </div>
-        <h2 style={{ margin: 0 }}>E-Examination</h2>
-        <p style={{ color: "var(--ink-soft)", fontSize: 14, marginTop: 6 }}>
-          กรอกรหัสพนักงานเพื่อเข้าสู่ระบบ
-        </p>
+        <div className="login-form">
+          <h2>เข้าสู่ระบบ</h2>
+          <p className="login-sub">กรอกรหัสพนักงานเพื่อเข้าสู่ระบบ</p>
+          <div className="login-label">รหัสพนักงาน</div>
+          <div className="pill-input">
+            <i className="ti ti-id-badge-2" aria-hidden="true"></i>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="เช่น 610433"
+              aria-label="รหัสพนักงาน"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              autoFocus
+            />
+          </div>
+          <button className="login-btn" onClick={handleLogin} disabled={loading}>
+            {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+          </button>
+          {error && (
+            <div className="error" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <i className="ti ti-alert-circle" aria-hidden="true"></i>
+              {error}
+            </div>
+          )}
+          <div className="login-help">
+            <i className="ti ti-help-circle" aria-hidden="true"></i>
+            เข้าระบบไม่ได้ ติดต่อ Admin ของแผนก
+          </div>
+        </div>
       </div>
-      <input
-        type="text"
-        inputMode="numeric"
-        placeholder="กรอกรหัสพนักงาน"
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-        autoFocus
-        style={{ textAlign: "center", fontSize: 18, letterSpacing: 1 }}
-      />
-      <button style={{ width: "100%", marginTop: 8 }} onClick={handleLogin} disabled={loading}>
-        {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
-      </button>
-      {error && (
-        <div className="error" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <i className="ti ti-alert-circle" aria-hidden="true"></i>
-          {error}
-        </div>
-      )}
     </div>
+  );
+}
+
+// ภาพประกอบหน้า Login (วาดด้วย SVG ไม่ต้องโหลดไฟล์รูป)
+function LoginIllustration() {
+  return (
+    <svg className="login-illus" viewBox="0 0 340 230" role="img" aria-label="ภาพประกอบ หน้าจอทำข้อสอบ">
+      <defs>
+        <linearGradient id="li-screen" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="1" stopColor="#EAF7F0" />
+        </linearGradient>
+        <linearGradient id="li-green" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#2CB884" />
+          <stop offset="1" stopColor="#167A52" />
+        </linearGradient>
+        <linearGradient id="li-leaf" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#5FD39E" />
+          <stop offset="1" stopColor="#1C8A5C" />
+        </linearGradient>
+        <filter id="li-shadow" x="-20%" y="-20%" width="140%" height="160%">
+          <feDropShadow dx="0" dy="10" stdDeviation="10" floodColor="#0F5A3A" floodOpacity="0.22" />
+        </filter>
+      </defs>
+      <ellipse cx="170" cy="212" rx="120" ry="10" fill="#0F5A3A" opacity="0.12" />
+      <rect x="150" y="168" width="40" height="34" rx="6" fill="#DDEFE6" />
+      <rect x="118" y="198" width="104" height="10" rx="5" fill="#F4FBF7" filter="url(#li-shadow)" />
+      <g filter="url(#li-shadow)">
+        <rect x="58" y="28" width="224" height="146" rx="16" fill="url(#li-screen)" />
+        <rect x="58" y="28" width="224" height="22" rx="16" fill="#F4FBF7" />
+        <circle cx="74" cy="39" r="3.5" fill="#F28B6B" /><circle cx="86" cy="39" r="3.5" fill="#F4CF63" /><circle cx="98" cy="39" r="3.5" fill="#5FD39E" />
+      </g>
+      <rect x="76" y="62" width="112" height="9" rx="4.5" fill="#1F7A55" opacity="0.85" />
+      <g>
+        <rect x="76" y="82" width="12" height="12" rx="3.5" fill="url(#li-green)" />
+        <path d="M79 88l2.5 2.5 4.5-5" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="96" y="84" width="84" height="7" rx="3.5" fill="#CFE7DA" />
+        <rect x="76" y="102" width="12" height="12" rx="3.5" fill="url(#li-green)" />
+        <path d="M79 108l2.5 2.5 4.5-5" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="96" y="104" width="70" height="7" rx="3.5" fill="#CFE7DA" />
+        <rect x="76" y="122" width="12" height="12" rx="3.5" fill="#FFFFFF" stroke="#A9D8BF" strokeWidth="1.5" />
+        <rect x="96" y="124" width="78" height="7" rx="3.5" fill="#CFE7DA" />
+        <rect x="76" y="146" width="64" height="16" rx="8" fill="url(#li-green)" />
+      </g>
+      <g filter="url(#li-shadow)">
+        <rect x="200" y="62" width="66" height="76" rx="14" fill="#FFFFFF" />
+      </g>
+      <circle cx="233" cy="96" r="22" fill="none" stroke="#E2F2EA" strokeWidth="7" />
+      <path d="M233 74 a22 22 0 1 1 -20.9 28.8" fill="none" stroke="url(#li-green)" strokeWidth="7" strokeLinecap="round" />
+      <text x="233" y="101" textAnchor="middle" fontSize="13" fontWeight="700" fill="#146B49" fontFamily="Prompt, sans-serif">85%</text>
+      <rect x="214" y="124" width="38" height="6" rx="3" fill="#CFE7DA" />
+      <g filter="url(#li-shadow)">
+        <rect x="246" y="10" width="62" height="38" rx="12" fill="#FFFFFF" />
+        <path d="M262 48 l-6 10 l14 -10z" fill="#FFFFFF" />
+      </g>
+      <rect x="258" y="21" width="38" height="5" rx="2.5" fill="#7FD3AC" />
+      <rect x="258" y="31" width="26" height="5" rx="2.5" fill="#CFE7DA" />
+      <g filter="url(#li-shadow)">
+        <circle cx="306" cy="120" r="15" fill="#FFFFFF" />
+      </g>
+      <path d="M300 124h12l-1.6-2.4v-4.2a4.4 4.4 0 0 0-8.8 0v4.2z M304 126.5a2 2 0 0 0 4 0" fill="#F2B634" />
+      <g>
+        <path d="M46 204 C 40 176, 22 160, 14 146 C 34 150, 50 168, 52 196z" fill="url(#li-leaf)" />
+        <path d="M52 204 C 54 170, 70 150, 84 140 C 84 164, 70 186, 58 204z" fill="url(#li-leaf)" opacity="0.9" />
+        <path d="M49 204 C 44 182, 44 160, 50 138 C 60 160, 58 184, 54 204z" fill="#2CB884" />
+        <rect x="34" y="196" width="36" height="18" rx="7" fill="#F4FBF7" filter="url(#li-shadow)" />
+      </g>
+      <circle cx="40" cy="44" r="10" fill="none" stroke="#FFFFFF" strokeWidth="3" />
+      <circle cx="318" cy="186" r="5" fill="#FFFFFF" />
+    </svg>
   );
 }
 
@@ -4190,7 +4498,7 @@ function Dashboard({ session, role, onLogout }) {
             )}
           </div>
           <div className="content-topbar-right">
-            <button className="logout-btn" onClick={onLogout}>
+            <button className="logout-btn" onClick={onLogout} aria-label="ออกจากระบบ" title="ออกจากระบบ">
               <i className="ti ti-logout-2" aria-hidden="true"></i>
               ออกจากระบบ
             </button>
